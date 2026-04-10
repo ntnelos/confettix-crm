@@ -36,6 +36,7 @@ export type Database = {
         Row: {
           id: string
           name: string
+          invoice_company_name: string | null
           employee_count: number | null
           general_info: string | null
           created_by: string | null
@@ -46,6 +47,7 @@ export type Database = {
         Insert: {
           id?: string
           name: string
+          invoice_company_name?: string | null
           employee_count?: number | null
           general_info?: string | null
           created_by?: string | null
@@ -53,6 +55,7 @@ export type Database = {
         }
         Update: {
           name?: string
+          invoice_company_name?: string | null
           employee_count?: number | null
           general_info?: string | null
           updated_by?: string | null
@@ -221,6 +224,7 @@ export type Database = {
           status: 'draft' | 'final' | 'approved' | 'rejected'
           subtotal: number
           vat_rate: number
+          shipping_cost: number
           total_with_vat: number
           terms_and_conditions: string | null
           version: number
@@ -238,6 +242,7 @@ export type Database = {
           status?: 'draft' | 'final' | 'approved' | 'rejected'
           subtotal?: number
           vat_rate?: number
+          shipping_cost?: number
           total_with_vat?: number
           terms_and_conditions?: string | null
           version?: number
@@ -250,6 +255,7 @@ export type Database = {
           status?: 'draft' | 'final' | 'approved' | 'rejected'
           subtotal?: number
           vat_rate?: number
+          shipping_cost?: number
           total_with_vat?: number
           terms_and_conditions?: string | null
           version?: number

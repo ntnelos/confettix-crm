@@ -9,6 +9,7 @@ const navItems = [
   { href: '/dashboard', label: 'לוח בקרה', icon: GridIcon },
   { href: '/organizations', label: 'ארגונים', icon: BuildingIcon },
   { href: '/contacts', label: 'אנשי קשר', icon: UsersIcon },
+  { href: '/leads', label: 'לידים', icon: InboxIcon },
   { href: '/opportunities', label: 'הזדמנויות', icon: TrendingIcon },
   { href: '/quotes', label: 'הצעות מחיר', icon: FileTextIcon },
   { href: '/orders', label: 'הזמנות', icon: ShoppingBagIcon },
@@ -159,6 +160,15 @@ function ReceiptIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
       <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+    </svg>
+  )
+}
+
+function InboxIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+      <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
     </svg>
   )
 }
