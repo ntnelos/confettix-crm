@@ -55,8 +55,8 @@ export default function ContactDetailsPage() {
 
   useEffect(() => {
     async function loadData() {
-      const contactRes = await supabase.from('contacts').select('*, organizations(id, name)').eq('id', id).single()
-      const orgsRes = await supabase.from('organizations').select('id, name').order('name')
+      const contactRes: any = await supabase.from('contacts').select('*, organizations(id, name)').eq('id', id).single()
+      const orgsRes: any = await supabase.from('organizations').select('id, name').order('name')
       
       if (contactRes.error || !contactRes.data) {
         console.error("Contact not found", contactRes.error)
