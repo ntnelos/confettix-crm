@@ -33,7 +33,8 @@ interface Contact {
 }
 
 export default function ContactDetailsPage() {
-  const { id } = useParams()
+  const params = useParams()
+  const id = params.id as string
   const router = useRouter()
   const supabase = createClient()
   

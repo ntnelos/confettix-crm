@@ -32,7 +32,8 @@ interface UpdateRecord {
 }
 
 export default function OpportunityDetailsPage() {
-  const { id } = useParams()
+  const params = useParams()
+  const id = params.id as string
   const router = useRouter()
   const supabase = createClient()
   

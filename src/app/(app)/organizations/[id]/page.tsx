@@ -42,7 +42,8 @@ interface Contact {
 }
 
 export default function OrganizationDetailsPage() {
-  const { id } = useParams()
+  const params = useParams()
+  const id = params.id as string
   const router = useRouter()
   const supabase = createClient()
   
