@@ -127,7 +127,7 @@ export default function ContactDetailsPage() {
 
   const handleCreateNewOrg = async () => {
     if (!orgSearchQuery.trim()) return
-    const { data, error } = await supabase.from('organizations').insert({ name: orgSearchQuery.trim() }).select().single()
+    const { data, error } = await (supabase.from('organizations') as any).insert({ name: orgSearchQuery.trim() }).select().single()
     if (data) {
       setOrganizations(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       handleAssignOrg(data.id, data.name)
