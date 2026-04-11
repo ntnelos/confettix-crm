@@ -106,7 +106,7 @@ export default function OpportunityDetailsPage() {
       type: newUpdate.type,
       content: newUpdate.content.trim()
     }
-    const { data, error } = await supabase.from('opportunity_updates').insert(payload).select().single()
+    const { data, error } = await (supabase.from('opportunity_updates') as any).insert(payload).select().single()
     if (data) {
       setUpdates([data as UpdateRecord, ...updates])
       setNewUpdate({ content: '', type: 'note' })
@@ -118,7 +118,7 @@ export default function OpportunityDetailsPage() {
 
   const handleDeleteUpdate = async (updateId: string) => {
     if (!window.confirm("למחוק תיעוד זה?")) return
-    const { error } = await supabase.from('opportunity_updates').delete().eq('id', updateId)
+    const { error } = await (supabase.from('opportunity_updates') as any).delete().eq('id', updateId)
     if (!error) setUpdates(prev => prev.filter(u => u.id !== updateId))
   }
 

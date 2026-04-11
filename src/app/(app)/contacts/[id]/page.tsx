@@ -142,7 +142,7 @@ export default function ContactDetailsPage() {
     setContact(prev => prev ? { ...prev, organization_id: null, organizations: null } : prev)
     
     // Refresh addresses to contact's own (if any)
-    const { data } = await supabase.from('delivery_addresses').select('*').eq('contact_id', id)
+    const { data } = await (supabase.from('delivery_addresses') as any).select('*').eq('contact_id', id)
     setAddresses(data || [])
   }
 
@@ -157,12 +157,12 @@ export default function ContactDetailsPage() {
     }
 
     if (editAddressId) {
-      const { error } = await supabase.from('delivery_addresses').update(payload).eq('id', editAddressId)
+      const { error } = await (supabase.from('delivery_addresses') as any).update(payload).eq('id', editAddressId)
       if (!error) {
         setAddresses(prev => prev.map(a => a.id === editAddressId ? { ...a, ...payload } : a))
       } else alert(error.message)
     } else {
-      const { data, error } = await supabase.from('delivery_addresses').insert(payload).select().single()
+      const { data, error } = await (supabase.from('delivery_addresses') as any).insert(payload).select().single()
       if (data) setAddresses(prev => [...prev, data])
       else if (error) alert(error.message)
     }
@@ -171,7 +171,7 @@ export default function ContactDetailsPage() {
 
   const handleDeleteAddress = async (addrId: string) => {
     if (!window.confirm('למחוק כתובת זו?')) return
-    const { error } = await supabase.from('delivery_addresses').delete().eq('id', addrId)
+    const { error } = await (supabase.from('delivery_addresses') as any).delete().eq('id', addrId)
     if (!error) setAddresses(prev => prev.filter(a => a.id !== addrId))
   }
 
