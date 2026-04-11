@@ -65,7 +65,7 @@ function NewOpportunityForm() {
 
   const handleCreateContact = async () => {
     if (!newContactName.trim()) return
-    const { data, error } = await supabase.from('contacts').insert({ 
+    const { data, error } = await (supabase.from('contacts') as any).insert({ 
       name: newContactName.trim(),
       organization_id: form.organization_id || null // Link to selected org if any
     }).select().single()
@@ -94,7 +94,7 @@ function NewOpportunityForm() {
     setLoading(true)
     setError('')
 
-    const { error: sbError } = await supabase.from('opportunities').insert({
+    const { error: sbError } = await (supabase.from('opportunities') as any).insert({
       subject: form.subject.trim(),
       status: form.status,
       contact_id: form.contact_id,

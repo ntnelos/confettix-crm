@@ -36,7 +36,7 @@ export default function NewContactPage() {
 
   const handleCreateOrg = async () => {
     if (!newOrgName.trim()) return
-    const { data, error } = await supabase.from('organizations').insert({ name: newOrgName.trim() }).select().single()
+    const { data, error } = await (supabase.from('organizations') as any).insert({ name: newOrgName.trim() }).select().single()
     if (data) {
       setOrganizations(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(prev => ({ ...prev, organization_id: data.id }))
@@ -56,11 +56,11 @@ export default function NewContactPage() {
     setLoading(true)
     setError('')
 
-    const { error: sbError } = await supabase.from('contacts').insert({
+    const { error: sbError } = await (supabase.from('contacts') as any).insert({
       name: form.name.trim(),
-      email: form.email || null,
-      mobile: form.mobile || null,
-      phone: form.phone || null,
+      email: form.email.trim() || null,
+      mobile: form.mobile.trim() || null,
+      phone: form.phone.trim() || null,
       organization_id: form.organization_id || null,
       notes: form.notes || null,
     })

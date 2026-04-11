@@ -31,7 +31,7 @@ export default function NewOrganizationPage() {
     setLoading(true)
     setError('')
 
-    const { error: sbError } = await supabase.from('organizations').insert({
+    const { error: sbError } = await (supabase.from('organizations') as any).insert({
       name: form.name.trim(),
       industry: form.industry || null,
       employee_count: form.employee_count ? parseInt(form.employee_count) : null,
