@@ -89,7 +89,7 @@ export default function OpportunityDetailsPage() {
     setOpp({ ...opp, [field]: value as never })
 
     const valForDB = (value === '') ? null : value
-    const { error } = await supabase.from('opportunities').update({ [field]: valForDB } as any).eq('id', opp.id)
+    const { error } = await (supabase.from('opportunities') as any).update({ [field]: valForDB }).eq('id', opp.id)
     if (error) {
        alert(`שגיאה בעדכון: ${error.message}`)
        setOpp(original)

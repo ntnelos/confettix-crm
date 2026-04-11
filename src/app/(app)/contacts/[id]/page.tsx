@@ -104,7 +104,7 @@ export default function ContactDetailsPage() {
     setContact({ ...contact, [field]: value as never })
 
     const valForDB = (value === '') ? null : value
-    const { error } = await supabase.from('contacts').update({ [field]: valForDB } as any).eq('id', contact.id)
+    const { error } = await (supabase.from('contacts') as any).update({ [field]: valForDB }).eq('id', contact.id)
     
     if (error) {
       console.error(error)

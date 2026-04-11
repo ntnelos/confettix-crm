@@ -101,7 +101,7 @@ export default function OrganizationDetailsPage() {
 
   const updateDeliveryAddress = async (addrId: string, field: keyof DeliveryAddress, value: string | null) => {
     // DB Update
-    const { error } = await supabase.from('delivery_addresses').update({ [field]: value } as any).eq('id', addrId)
+    const { error } = await (supabase.from('delivery_addresses') as any).update({ [field]: value }).eq('id', addrId)
     if (!error) {
        setAddresses(prev => prev.map(a => a.id === addrId ? { ...a, [field]: value } : a))
     }
@@ -175,7 +175,7 @@ export default function OrganizationDetailsPage() {
     const valForDB = (value === '' && typeof value === 'string') ? null : value
 
     // Update DB
-    const { error } = await supabase.from('organizations').update({ [field]: valForDB } as any).eq('id', org.id)
+    const { error } = await (supabase.from('organizations') as any).update({ [field]: valForDB }).eq('id', org.id)
     if (error) {
       console.error(error)
       alert(`שגיאה בעדכון השדה: ${error.message}`)
