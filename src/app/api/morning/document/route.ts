@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     // Wait, the query `quotes(id, subtotal, shipping_cost, quotes_items(*))` might not have `quotes_items`. Let's fetch quote items explicitly.
     const { data: quoteItems } = await supabase.from('quote_items').select('*').eq('quote_id', order.quote_id)
     
-    let income = [];
+    let income: any[] = [];
     if (quoteItems) {
       income = quoteItems.map((item: any) => ({
         description: item.product_name,

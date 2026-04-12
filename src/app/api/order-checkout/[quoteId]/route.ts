@@ -32,8 +32,8 @@ export async function GET(
   const { data: items } = await supabase.from('quote_items').select('*').eq('quote_id', quoteId).order('sort_order')
 
   // 3. Fetch Organization + Addresses + Subject
-  let org = null
-  let addresses = []
+  let org: any = null
+  let addresses: any[] = []
   let opp_subject = ''
   if (order.opportunity_id) {
      const { data: oppData } = await supabase.from('opportunities').select('organization_id, subject').eq('id', order.opportunity_id).single()
