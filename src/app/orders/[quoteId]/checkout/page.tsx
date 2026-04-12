@@ -11,6 +11,7 @@ interface OrderData {
   org: any
   addresses: any[]
   opp_subject?: string
+  expected_delivery?: string | null
 }
 
 export default function OrderCheckoutPage() {
@@ -42,6 +43,7 @@ export default function OrderCheckoutPage() {
 
   // Signature
   const [signature, setSignature] = useState<string | null>(null)
+  const [expectedDelivery, setExpectedDelivery] = useState<string>('')
 
   useEffect(() => {
     async function fetchData() {
@@ -78,6 +80,10 @@ export default function OrderCheckoutPage() {
           setContactName(json.contact.name || '')
           setContactPhone(json.contact.phone || '')
           setContactEmail(json.contact.email || '')
+        }
+
+        if (json.expected_delivery) {
+          setExpectedDelivery(json.expected_delivery)
         }
 
         // If order is signed and has signature, pre-fill it for preview
@@ -123,7 +129,8 @@ export default function OrderCheckoutPage() {
         delivery_address_id: selectedAddressId === 'new' ? null : selectedAddressId,
         new_address: selectedAddressId === 'new' ? newAddress : null,
         signature_data: signature,
-        total_amount: calculateFinalTotal()
+        total_amount: calculateFinalTotal(),
+        expected_delivery: expectedDelivery
       }
 
       const res = await fetch(`/api/order-checkout/${quoteId}`, {
@@ -373,6 +380,24 @@ export default function OrderCheckoutPage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>אימייל</label>
                   <input type="email" dir="ltr" value={contactEmail} onChange={e => setContactEmail(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="אימייל" />
                 </div>
+              </div>
+            </div>
+
+            {/* Form: Delivery Date */}
+            <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1.1</span>
+                תאריך אספקה מבוקש
+              </h2>
+              <div style={{ maxWidth: 240 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>בחרו תאריך אספקה <span style={{ color: '#ef4444' }}>*</span></label>
+                <input
+                  type="date"
+                  value={expectedDelivery}
+                  onChange={e => setExpectedDelivery(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, outline: 'none' }}
+                />
+                <p style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>נתון זה יתעדכן בהזמנה ויועבר לצוות הלוגיסטיקה.</p>
               </div>
             </div>
 

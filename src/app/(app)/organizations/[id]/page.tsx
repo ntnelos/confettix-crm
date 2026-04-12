@@ -365,7 +365,12 @@ export default function OrganizationDetailsPage() {
                        <Link key={opp.id} href={`/opportunities/${opp.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', border: '1px solid var(--border)', borderRadius: 12, textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'var(--surface-2)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={e => { e.currentTarget.style.borderColor='var(--pink)'; e.currentTarget.style.background='var(--surface)'; }} onMouseOut={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--surface-2)'; }}>
                          <div>
                             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--text-primary)' }}>{opp.subject}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>נוצר ב: {new Date(opp.created_at).toLocaleDateString('he-IL')}</div>
+                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+                               <span>נוצר ב: {new Date(opp.created_at).toLocaleDateString('he-IL')}</span>
+                               {opp.expected_delivery && (
+                                 <span style={{ color: 'var(--pink)', fontWeight: 600 }}>🚚 אספקה: {new Date(opp.expected_delivery).toLocaleDateString('he-IL')}</span>
+                               )}
+                            </div>
                          </div>
                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                             <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>

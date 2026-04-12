@@ -430,51 +430,56 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                   />
                 </div>
                 <div style={{ padding: '24px 20px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-
-                  {/* Smart Search Bar & Buttons */}
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder="🔎 הקלד לחיפוש ושליפת מוצר מקטלוג ווקומרס (WooCommerce)..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{
-                          width: '100%', padding: '14px 20px', borderRadius: 8,
-                          border: '2px solid var(--border)', fontSize: 16,
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
-                        }}
-                      />
-                      {isSearching && <div style={{ position: 'absolute', left: 20, top: 16, fontSize: 13, color: 'var(--text-muted)' }}>מחפש...</div>}
-
-                      {searchQuery.length >= 2 && searchResults.length > 0 && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 10, boxShadow: '0 8px 16px rgba(0,0,0,0.1)', maxHeight: 300, overflowY: 'auto' }}>
-                          {searchResults.map(prod => (
-                            <div
-                              key={prod.id}
-                              onClick={() => addItemToQuote(activeQuoteId, prod)}
-                              style={{ padding: 12, borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }}
-                              onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                              onMouseOut={e => e.currentTarget.style.background = 'white'}
-                            >
-                              {prod.image_url ? (
-                                <img src={prod.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                              ) : (
-                                <div style={{ width: 40, height: 40, background: '#eee', borderRadius: 6 }}></div>
-                              )}
-                              <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{prod.name}</div>
-                              <div style={{ color: 'var(--pink)', fontWeight: 700, fontSize: 14 }}>₪{prod.price}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  {activeQuote?.orders?.some((or: any) => or.status === 'signed') ? (
+                    <div style={{ textAlign: 'center', color: '#166534', background: '#f0fdf4', padding: '16px', borderRadius: 8, border: '1px solid #b91c1c00', borderLeft: '4px solid #4caf50', fontWeight: 600 }}>
+                      🛡️ הזמנה זו נחתמה ומאובטחת. לא ניתן לבצע שינויים בפריטים.
                     </div>
+                  ) : (
+                    /* Smart Search Bar & Buttons */
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                          type="text"
+                          placeholder="🔎 הקלד לחיפוש ושליפת מוצר מקטלוג ווקומרס (WooCommerce)..."
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%', padding: '14px 20px', borderRadius: 8,
+                            border: '2px solid var(--border)', fontSize: 16,
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+                          }}
+                        />
+                        {isSearching && <div style={{ position: 'absolute', left: 20, top: 16, fontSize: 13, color: 'var(--text-muted)' }}>מחפש...</div>}
 
-                    {/* Add empty generic row */}
-                    <button onClick={() => addItemToQuote(activeQuoteId)} className="btn btn-secondary" style={{ padding: '14px 24px', fontSize: 15, background: 'white' }}>
-                      + הוספת שורה ידנית
-                    </button>
-                  </div>
+                        {searchQuery.length >= 2 && searchResults.length > 0 && (
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, zIndex: 10, boxShadow: '0 8px 16px rgba(0,0,0,0.1)', maxHeight: 300, overflowY: 'auto' }}>
+                            {searchResults.map(prod => (
+                              <div
+                                key={prod.id}
+                                onClick={() => addItemToQuote(activeQuoteId, prod)}
+                                style={{ padding: 12, borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'background 0.2s' }}
+                                onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                                onMouseOut={e => e.currentTarget.style.background = 'white'}
+                              >
+                                {prod.image_url ? (
+                                  <img src={prod.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                                ) : (
+                                  <div style={{ width: 40, height: 40, background: '#eee', borderRadius: 6 }}></div>
+                                )}
+                                <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{prod.name}</div>
+                                <div style={{ color: 'var(--pink)', fontWeight: 700, fontSize: 14 }}>₪{prod.price}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Add empty generic row */}
+                      <button onClick={() => addItemToQuote(activeQuoteId)} className="btn btn-secondary" style={{ padding: '14px 24px', fontSize: 15, background: 'white' }}>
+                        + הוספת שורה ידנית
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ padding: 20 }}>
@@ -494,90 +499,100 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                         </tr>
                       </thead>
                       <tbody>
-                        {(itemsMap[activeQuoteId] || []).map(item => (
-                          <tr key={item.id}>
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {/* Thumbnail: image if WC product, gift icon if manual */}
-                                {item.image_url ? (
-                                  <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה במוצר באתר" style={{ flexShrink: 0 }}>
-                                    <img
-                                      src={item.image_url}
-                                      alt={item.product_name}
-                                      width={36}
-                                      height={36}
-                                      style={{ borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)', display: 'block' }}
-                                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                                    />
-                                  </a>
-                                ) : (
-                                  <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', borderRadius: 6, border: '1px dashed var(--border)', flexShrink: 0, color: 'var(--text-muted)' }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" />
-                                      <line x1="12" y1="22" x2="12" y2="7" />
-                                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-                                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-                                    </svg>
-                                  </span>
+                        {(itemsMap[activeQuoteId] || []).map(item => {
+                          const isSigned = activeQuote?.orders?.some((or: any) => or.status === 'signed');
+                          return (
+                            <tr key={item.id}>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {/* Thumbnail: image if WC product, gift icon if manual */}
+                                  {item.image_url ? (
+                                    <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה במוצר באתר" style={{ flexShrink: 0 }}>
+                                      <img
+                                        src={item.image_url}
+                                        alt={item.product_name}
+                                        width={36}
+                                        height={36}
+                                        style={{ borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)', display: 'block' }}
+                                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                                      />
+                                    </a>
+                                  ) : (
+                                    <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', borderRadius: 6, border: '1px dashed var(--border)', flexShrink: 0, color: 'var(--text-muted)' }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" />
+                                        <line x1="12" y1="22" x2="12" y2="7" />
+                                        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                                        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                                      </svg>
+                                    </span>
+                                  )}
+                                  <input
+                                    value={item.product_name}
+                                    onChange={e => updateItem(activeQuoteId, item.id, 'product_name', e.target.value)}
+                                    disabled={isSigned}
+                                    style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500, fontSize: 13, cursor: isSigned ? 'not-allowed' : 'text' }}
+                                  />
+                                </div>
+                                {item.woo_product_url && (
+                                  <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 44, display: 'block', marginTop: 2 }}>🔗 צפה באתר</a>
                                 )}
-                                <input
-                                  value={item.product_name}
-                                  onChange={e => updateItem(activeQuoteId, item.id, 'product_name', e.target.value)}
-                                  style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500, fontSize: 13 }}
+                              </td>
+
+                              {/* Description column */}
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', verticalAlign: 'top' }}>
+                                <textarea
+                                  value={item.description || ''}
+                                  onChange={e => updateItem(activeQuoteId, item.id, 'description', e.target.value)}
+                                  disabled={isSigned}
+                                  rows={2}
+                                  style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 12, color: 'var(--text-secondary)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, outline: 'none', cursor: isSigned ? 'not-allowed' : 'text' }}
+                                  placeholder="תיאור חופשי..."
                                 />
-                              </div>
-                              {item.woo_product_url && (
-                                <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 44, display: 'block', marginTop: 2 }}>🔗 צפה באתר</a>
-                              )}
-                            </td>
-
-                            {/* Description column */}
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', verticalAlign: 'top' }}>
-                              <textarea
-                                value={item.description || ''}
-                                onChange={e => updateItem(activeQuoteId, item.id, 'description', e.target.value)}
-                                rows={2}
-                                style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 12, color: 'var(--text-secondary)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, outline: 'none' }}
-                                placeholder="תיאור חופשי..."
-                              />
-                            </td>
+                              </td>
 
 
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                              <input
-                                type="number" min="1"
-                                value={item.quantity}
-                                onChange={e => updateItem(activeQuoteId, item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                style={{ width: '100%', textAlign: 'center', padding: 4, border: '1px solid var(--border)', borderRadius: 4 }}
-                              />
-                            </td>
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>₪</span>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
                                 <input
-                                  type="number"
-                                  value={item.unit_price}
-                                  onChange={e => updateItem(activeQuoteId, item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-                                  style={{ width: '100%', textAlign: 'center', border: 'none', background: 'transparent' }}
+                                  type="number" min="1"
+                                  value={item.quantity}
+                                  onChange={e => updateItem(activeQuoteId, item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                  disabled={isSigned}
+                                  style={{ width: '100%', textAlign: 'center', padding: 4, border: '1px solid var(--border)', borderRadius: 4, cursor: isSigned ? 'not-allowed' : 'text' }}
                                 />
-                              </div>
-                            </td>
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                              <input
-                                type="number" min="0" max="100"
-                                value={item.discount_percent}
-                                onChange={e => updateItem(activeQuoteId, item.id, 'discount_percent', parseFloat(e.target.value) || 0)}
-                                style={{ width: '100%', textAlign: 'center', border: 'none', background: 'transparent' }}
-                              />
-                            </td>
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', textAlign: 'center', fontWeight: 600 }}>
-                              ₪{item.line_total.toFixed(2)}
-                            </td>
-                            <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', textAlign: 'center' }}>
-                              <button onClick={() => deleteItem(activeQuoteId, item.id)} style={{ background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: 16 }}>×</button>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>₪</span>
+                                  <input
+                                    type="number"
+                                    value={item.unit_price}
+                                    onChange={e => updateItem(activeQuoteId, item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                                    disabled={isSigned}
+                                    style={{ width: '100%', textAlign: 'center', border: 'none', background: 'transparent', cursor: isSigned ? 'not-allowed' : 'text' }}
+                                  />
+                                </div>
+                              </td>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
+                                <input
+                                  type="number" min="0" max="100"
+                                  value={item.discount_percent}
+                                  onChange={e => updateItem(activeQuoteId, item.id, 'discount_percent', parseFloat(e.target.value) || 0)}
+                                  disabled={isSigned}
+                                  style={{ width: '100%', textAlign: 'center', border: 'none', background: 'transparent', cursor: isSigned ? 'not-allowed' : 'text' }}
+                                />
+                              </td>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', textAlign: 'center', fontWeight: 600 }}>
+                                ₪{item.line_total.toFixed(2)}
+                              </td>
+                              <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', textAlign: 'center' }}>
+                                {!isSigned && (
+                                  <button onClick={() => deleteItem(activeQuoteId, item.id)} style={{ background: 'none', border: 'none', color: '#e53935', cursor: 'pointer', fontSize: 16 }}>×</button>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -590,28 +605,42 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                         if (isOrder) {
                           return (
                             <>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textAlign: 'right' }}>פעולות בסיסיות:</div>
+                              {q.orders?.some((or: any) => or.status === 'signed') ? (
+                                <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 700, padding: '8px 12px', background: '#dcfce7', borderRadius: 6 }}>
+                                  ✓ הזמנה חתומה - לא ניתן למחוק
+                                </div>
+                              ) : (
                                 <button
                                   onClick={() => deleteQuote(activeQuoteId)}
                                   style={{ padding: '8px 16px', fontSize: 12, background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
                                 >
                                   מחק הזמנה 🗑️
                                 </button>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
-                                <button
-                                  onClick={() => window.open(`/orders/${activeQuoteId}/checkout`, '_blank')}
-                                  style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-                                  הפק חוזה לחתימה
-                                </button>
-                              </div>
-                            </>
-                          )
-                        }
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
+                              <button
+                                onClick={() => window.open(`/orders/${activeQuoteId}/checkout${q.orders?.some((or: any) => or.status === 'signed') ? '?mode=readOnly' : ''}`, '_blank')}
+                                style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                                {q.orders?.some((or: any) => or.status === 'signed') ? 'צפייה בחוזה חתום' : 'הפק חוזה לחתימה'}
+                              </button>
+                            </div>
+                          </>
+                        )
+                      }
+                      
+                      const opportunityHasSignedOrder = quotes.some(quote => quote.orders?.some((or: any) => or.status === 'signed'));
+                      
+                      if (opportunityHasSignedOrder) {
+                        return (
+                          <div style={{ fontSize: 13, color: '#94a3b8', background: '#f8fafc', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0', fontWeight: 600 }}>
+                            קיימת הזמנה חתומה להזדמנות זו. לא ניתן להפיק הזמנות נוספות.
+                          </div>
+                        )
+                      }
                         return (
                           <>
                             <div>

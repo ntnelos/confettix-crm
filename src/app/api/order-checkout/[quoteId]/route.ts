@@ -63,7 +63,14 @@ export async function GET(
     }
   }
 
-  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact, opp_subject })
+  // 5. Fetch expected delivery from opportunity
+  let expected_delivery = null;
+  if (order.opportunity_id) {
+     const { data: oppDate } = await supabase.from('opportunities').select('expected_delivery').eq('id', order.opportunity_id).single()
+     if (oppDate) expected_delivery = oppDate.expected_delivery
+  }
+
+  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact, opp_subject, expected_delivery })
 }
 
 export async function POST(
@@ -118,11 +125,13 @@ export async function POST(
        }).eq('id', oppOrgId)
     }
 
-    // 4. Update the Opportunity (payment method & status)
+    // 4. Update the Opportunity (payment method, status, value, and delivery date)
     if (order.opportunity_id) {
       await supabase.from('opportunities').update({
         payment_method,
-        status: 'won'
+        status: 'won',
+        calculated_value: total_amount,
+        expected_delivery: body.expected_delivery // Extracting from body
       }).eq('id', order.opportunity_id)
     }
 
