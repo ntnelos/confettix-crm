@@ -78,7 +78,7 @@ export default function OrderCheckoutPage() {
 
         if (json.contact) {
           setContactName(json.contact.name || '')
-          setContactPhone(json.contact.phone || '')
+          setContactPhone(json.contact.mobile || json.contact.phone || '')
           setContactEmail(json.contact.email || '')
         }
 
@@ -130,7 +130,9 @@ export default function OrderCheckoutPage() {
         new_address: selectedAddressId === 'new' ? newAddress : null,
         signature_data: signature,
         total_amount: calculateFinalTotal(),
-        expected_delivery: expectedDelivery
+        expected_delivery: expectedDelivery,
+        contact_name: contactName,
+        contact_phone: contactPhone
       }
 
       const res = await fetch(`/api/order-checkout/${quoteId}`, {
@@ -282,7 +284,7 @@ export default function OrderCheckoutPage() {
             </div>
             <div>
               <strong style={{ marginLeft: 8 }}>תאריך לאספקה:</strong>
-              <span>_________________</span>
+              <span>{expectedDelivery ? new Date(expectedDelivery).toLocaleDateString('he-IL') : '_________________'}</span>
             </div>
           </div>
 
@@ -386,7 +388,7 @@ export default function OrderCheckoutPage() {
             {/* Form: Delivery Date */}
             <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1.1</span>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
                 תאריך אספקה מבוקש
               </h2>
               <div style={{ maxWidth: 240 }}>
@@ -404,7 +406,7 @@ export default function OrderCheckoutPage() {
             {/* Form: Delivery */}
             <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
               <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
                 כתובת אספקה
               </h2>
 
@@ -455,7 +457,7 @@ export default function OrderCheckoutPage() {
             {/* Form: Payment Method */}
             <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
                 אמצעי תשלום
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -482,7 +484,7 @@ export default function OrderCheckoutPage() {
             {/* Form: Signature & Actions */}
             <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
               <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>5</span>
                 חתימה מרחוק
               </h2>
               <div className="no-print" style={{ marginBottom: 24 }}>

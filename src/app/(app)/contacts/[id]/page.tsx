@@ -42,6 +42,7 @@ export default function ContactDetailsPage() {
   const [loading, setLoading] = useState(true)
   
   const [opportunities, setOpportunities] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
   
   // Organization Assignment Modal State
   const [organizations, setOrganizations] = useState<{id: string, name: string}[]>([])
@@ -84,7 +85,20 @@ export default function ContactDetailsPage() {
         .select('*')
         .eq('contact_id', c.id)
         .order('created_at', { ascending: false })
-      if (opps) setOpportunities(opps)
+      if (opps) {
+        setOpportunities(opps)
+        
+        // Fetch Invoices efficiently via Order IDs
+        if (opps.length > 0) {
+          const oppIds = opps.map(o => o.id)
+          const { data: contactOrders } = await supabase.from('orders').select('id').in('opportunity_id', oppIds)
+          if (contactOrders && contactOrders.length > 0) {
+             const orderIds = contactOrders.map(o => o.id)
+             const { data: contactInvoices } = await supabase.from('invoices').select('*').in('order_id', orderIds).order('issued_at', { ascending: false })
+             setInvoices(contactInvoices || [])
+          }
+        }
+      }
       
       setLoading(false)
     }
@@ -400,6 +414,42 @@ export default function ContactDetailsPage() {
               </div>
             </div>
 
+            {/* Invoices History Card */}
+            <div className="card">
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600 }}>היסטוריית חשבוניות ({invoices.length})</h2>
+              </div>
+              <div style={{ padding: 20 }}>
+                {invoices.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>לא נמצאו מסמכים המקושרים לאיש קשר זה.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {invoices.map(inv => (
+                      <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface-2)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                        <div>
+                           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--text-primary)' }}>
+                             חשבונית {inv.invoice_number}
+                             {inv.type === '305' || inv.type === 'invoice' ? ' (חשבונית מס)' : ''}
+                           </div>
+                           <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+                               <span>תאריך מורנינג: {new Date(inv.issued_at).toLocaleDateString('he-IL')}</span>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>₪{parseFloat(inv.amount || 0).toLocaleString()}</div>
+                           {inv.pdf_url && (
+                             <a target="_blank" href={inv.pdf_url} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 6, fontWeight: 700, background: '#e0e7ff', color: '#3730A3', textDecoration: 'none' }}>
+                               צפייה ב-PDF
+                             </a>
+                           )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
 
           {/* Sidebar */}
@@ -433,6 +483,13 @@ export default function ContactDetailsPage() {
                   dir="ltr"
                   onSave={(val) => updateContactField('phone', val)}
                 />
+                
+                {contact.morning_id && (
+                  <div style={{ marginTop: 12, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 600, color: '#3730A3' }}>Morning ID:</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{contact.morning_id}</span>
+                  </div>
+                )}
                 
                 {/* Organization Link Block */}
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed var(--border-strong)' }}>

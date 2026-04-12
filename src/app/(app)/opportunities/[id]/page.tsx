@@ -44,6 +44,10 @@ export default function OpportunityDetailsPage() {
   const [signedOrder, setSignedOrder] = useState<any>(null)
   const [deliveryAddress, setDeliveryAddress] = useState<any>(null)
   
+  // Invoice State
+  const [invoice, setInvoice] = useState<any>(null)
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
+  
   // New Update Form
   const [newUpdate, setNewUpdate] = useState({ content: '', type: 'note' as any })
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false)
@@ -73,15 +77,17 @@ export default function OpportunityDetailsPage() {
       if (updatesData) setUpdates(updatesData as UpdateRecord[])
 
       const { data: orderData } = await supabase.from('orders')
-        .select('*, quotes(quote_number)')
+        .select('*, quotes(quote_number), invoices(*)')
         .eq('opportunity_id', id)
         .eq('status', 'signed')
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
       
-      if (orderData) {
          setSignedOrder(orderData)
+         if (orderData.invoices && orderData.invoices.length > 0) {
+           setInvoice(orderData.invoices[0])
+         }
          if (orderData.delivery_address_id) {
            const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', orderData.delivery_address_id).single()
            if (addr) setDeliveryAddress(addr)
@@ -139,6 +145,27 @@ export default function OpportunityDetailsPage() {
     if (!window.confirm("למחוק תיעוד זה?")) return
     const { error } = await (supabase.from('opportunity_updates') as any).delete().eq('id', updateId)
     if (!error) setUpdates(prev => prev.filter(u => u.id !== updateId))
+  }
+
+  const handleGenerateInvoice = async () => {
+    if (!signedOrder) return
+    setIsGeneratingInvoice(true)
+    try {
+      const res = await fetch('/api/morning/document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: signedOrder.id })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to generate invoice')
+      
+      setInvoice(data.invoice)
+      alert('חשבונית מס הופקה בהצלחה!')
+    } catch (err: any) {
+      alert(`שגיאה בהפקת החשבונית: ${err.message}`)
+    } finally {
+      setIsGeneratingInvoice(false)
+    }
   }
 
   if (loading) {
@@ -470,6 +497,48 @@ export default function OpportunityDetailsPage() {
                    <a target="_blank" href={`/orders/${signedOrder.quote_id}/checkout?mode=readOnly`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#16a34a', color: 'white', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
                      👁️ צפו בהזמנה החתומה (PDF)
                    </a>
+                </div>
+              </div>
+            )}
+
+            {/* INVOICE BLOCK */}
+            {signedOrder && (
+              <div className="card" style={{ background: 'var(--surface)' }}>
+                <div className="card-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    📄 חשבוניות
+                  </h2>
+                </div>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                   {invoice ? (
+                     <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                          <strong>סוג מסמך:</strong>
+                          <span>{invoice.type === '305' || invoice.type === 'invoice' ? 'חשבונית מס' : invoice.type}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                          <strong>מספר מסמך:</strong>
+                          <span>{invoice.invoice_number}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                          <strong>תאריך:</strong>
+                          <span>{new Date(invoice.issued_at).toLocaleDateString('he-IL')}</span>
+                        </div>
+                        {invoice.pdf_url && (
+                          <a target="_blank" href={invoice.pdf_url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#e0e7ff', color: '#3730A3', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
+                            👁️ צפייה במסמך מורנינג
+                          </a>
+                        )}
+                     </>
+                   ) : (
+                     <button
+                        onClick={handleGenerateInvoice}
+                        disabled={isGeneratingInvoice}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#3730A3', border: 'none', color: 'white', borderRadius: 8, cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', opacity: isGeneratingInvoice ? 0.7 : 1 }}
+                     >
+                        📄 {isGeneratingInvoice ? 'מפיק חשבונית מורנינג...' : 'הפק חשבונית מס'}
+                     </button>
+                   )}
                 </div>
               </div>
             )}

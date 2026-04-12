@@ -89,7 +89,9 @@ export async function POST(
       delivery_address_id, 
       new_address, 
       signature_data,
-      total_amount 
+      total_amount,
+      contact_name,
+      contact_phone
     } = body
 
     // 1. Get the existing order ID
@@ -133,6 +135,17 @@ export async function POST(
         calculated_value: total_amount,
         expected_delivery: body.expected_delivery // Extracting from body
       }).eq('id', order.opportunity_id)
+    }
+
+    // 4.5 Update the Contact (if exists)
+    if (order.opportunity_id) {
+       const { data: oppForContact } = await supabase.from('opportunities').select('contact_id').eq('id', order.opportunity_id).single()
+       if (oppForContact?.contact_id) {
+          await supabase.from('contacts').update({
+            name: contact_name,
+            mobile: contact_phone // Using mobile for the phone number entered in the form
+          }).eq('id', oppForContact.contact_id)
+       }
     }
 
     // 5. Update the Order

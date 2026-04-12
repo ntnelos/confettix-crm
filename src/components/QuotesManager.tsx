@@ -605,32 +605,33 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                         if (isOrder) {
                           return (
                             <>
-                              {q.orders?.some((or: any) => or.status === 'signed') ? (
-                                <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 700, padding: '8px 12px', background: '#dcfce7', borderRadius: 6 }}>
-                                  ✓ הזמנה חתומה - לא ניתן למחוק
-                                </div>
-                              ) : (
+                              <div>
+                                {activeQuote?.orders?.some((or: any) => or.status === 'signed') ? (
+                                  <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 700, padding: '8px 12px', background: '#dcfce7', borderRadius: 6 }}>
+                                    ✓ הזמנה חתומה - לא ניתן למחוק
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => deleteQuote(activeQuoteId)}
+                                    style={{ padding: '8px 16px', fontSize: 12, background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+                                  >
+                                    מחק הזמנה 🗑️
+                                  </button>
+                                )}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
                                 <button
-                                  onClick={() => deleteQuote(activeQuoteId)}
-                                  style={{ padding: '8px 16px', fontSize: 12, background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+                                  onClick={() => window.open(`/orders/${activeQuoteId}/checkout${activeQuote?.orders?.some((or: any) => or.status === 'signed') ? '?mode=readOnly' : ''}`, '_blank')}
+                                  style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
                                 >
-                                  מחק הזמנה 🗑️
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                                  {activeQuote?.orders?.some((or: any) => or.status === 'signed') ? 'צפייה בחוזה חתום' : 'הפק חוזה לחתימה'}
                                 </button>
-                              )}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
-                              <button
-                                onClick={() => window.open(`/orders/${activeQuoteId}/checkout${q.orders?.some((or: any) => or.status === 'signed') ? '?mode=readOnly' : ''}`, '_blank')}
-                                style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-                                {q.orders?.some((or: any) => or.status === 'signed') ? 'צפייה בחוזה חתום' : 'הפק חוזה לחתימה'}
-                              </button>
-                            </div>
-                          </>
-                        )
-                      }
+                              </div>
+                            </>
+                          )
+                        }
                       
                       const opportunityHasSignedOrder = quotes.some(quote => quote.orders?.some((or: any) => or.status === 'signed'));
                       
