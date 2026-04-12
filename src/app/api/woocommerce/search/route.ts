@@ -18,21 +18,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Basic Auth header for WooCommerce REST API
-    const authHeader = 'Basic ' + Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')
+    // Strip trailing slash from store URL to prevent double-slash
+    const baseUrl = wcUrl.replace(/\/$/, '')
     
     // Construct the WooCommerce API URL
-    // We search across products, getting only published ones to keep it clean.
-    const url = new URL(`${wcUrl}/wp-json/wc/v3/products`)
+    const url = new URL(`${baseUrl}/wp-json/wc/v3/products`)
     url.searchParams.append('search', q)
     url.searchParams.append('status', 'publish')
-    url.searchParams.append('per_page', '10') // Limit results to fast search
+    url.searchParams.append('per_page', '10')
+    // Use query string auth - more compatible than Basic Auth on many WP hosts
+    url.searchParams.append('consumer_key', consumerKey)
+    url.searchParams.append('consumer_secret', consumerSecret)
 
-    // Fetch from WooCommerce
+    // Fetch from WooCommerce (no Authorization header needed with query string auth)
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Authorization': authHeader,
         'Content-Type': 'application/json'
       }
     })
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     if (!response.ok) {
       const errText = await response.text()
       console.error('WooCommerce API Error:', response.status, errText)
-      return NextResponse.json({ error: `WooCommerce API responded with status ${response.status}` }, { status: response.status })
+      return NextResponse.json({ error: `WooCommerce API responded with status ${response.status}`, detail: errText }, { status: response.status })
     }
 
     const data = await response.json()
