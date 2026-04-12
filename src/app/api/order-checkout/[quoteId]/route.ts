@@ -45,14 +45,21 @@ export async function GET(
      }
   }
   
-  // 4. Fetch the payment method from opportunity
+  // 4. Fetch the payment method & contact from opportunity
   let payment_method = null;
+  let contact = null;
   if (order.opportunity_id) {
-    const { data: oppForPay } = await supabase.from('opportunities').select('payment_method').eq('id', order.opportunity_id).single()
-    if (oppForPay) payment_method = oppForPay.payment_method;
+    const { data: oppForPay } = await supabase.from('opportunities').select('payment_method, contact_id').eq('id', order.opportunity_id).single()
+    if (oppForPay) {
+       payment_method = oppForPay.payment_method;
+       if (oppForPay.contact_id) {
+          const { data: contactData } = await supabase.from('contacts').select('*').eq('id', oppForPay.contact_id).single()
+          contact = contactData
+       }
+    }
   }
 
-  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method })
+  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact })
 }
 
 export async function POST(
@@ -88,7 +95,7 @@ export async function POST(
            organization_id: opp.organization_id,
            street: new_address.street,
            city: new_address.city,
-           label: 'כתובת מהזמנה',
+           label: new_address.label || 'כתובת מהזמנה',
            contact_name: new_address.contact_name || null,
            contact_phone: new_address.contact_phone || null
         }).select('id').single()
