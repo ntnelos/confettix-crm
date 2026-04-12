@@ -47,7 +47,7 @@ export default function OpportunitiesPage() {
     // Optimistic UI Update
     setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o))
     
-    const { error } = await supabase.from('opportunities').update({ status: newStatus }).eq('id', id)
+    const { error } = await (supabase.from('opportunities') as any).update({ status: newStatus }).eq('id', id)
     if (error) {
       alert(`שגיאה בעדכון הסטטוס: ${error.message}`)
       fetchOpps() // revert on fail

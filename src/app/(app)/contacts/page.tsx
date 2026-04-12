@@ -51,7 +51,7 @@ export default function ContactsPage() {
   const handleDeleteContact = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את איש הקשר "${name}" לצמיתות?`)) return
     
-    const { error } = await supabase.from('contacts').delete().eq('id', id)
+    const { error } = await (supabase.from('contacts') as any).delete().eq('id', id)
     if (!error) {
       setContacts(prev => prev.filter(c => c.id !== id))
     } else {

@@ -49,8 +49,7 @@ export default function LeadsPage() {
     // 1. Create Organization (if provided)
     let orgId = null
     if (convertData.company) {
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
+      const { data: orgData, error: orgError } = await (supabase.from('organizations') as any)
         .insert({ name: convertData.company })
         .select()
         .single()
@@ -63,8 +62,7 @@ export default function LeadsPage() {
     }
 
     // 2. Create Contact
-    const { data: contactData, error: contactError } = await supabase
-      .from('contacts')
+    const { data: contactData, error: contactError } = await (supabase.from('contacts') as any)
       .insert({
         name: convertData.name || 'ללא שם',
         phone: convertData.phone || null,
@@ -82,8 +80,7 @@ export default function LeadsPage() {
     }
 
     // 3. Update Lead status
-    const { error: leadError } = await supabase
-      .from('leads')
+    const { error: leadError } = await (supabase.from('leads') as any)
       .update({ status: 'converted', matched_contact_id: contactData.id })
       .eq('id', convertingLead.id)
 
@@ -116,7 +113,7 @@ export default function LeadsPage() {
   }, [])
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('leads').delete().eq('id', id)
+    const { error } = await (supabase.from('leads') as any).delete().eq('id', id)
     if (error) {
       console.error('Delete error:', error)
       alert(`שגיאה במחיקה: ${error.message}`)
@@ -129,8 +126,7 @@ export default function LeadsPage() {
   const handleCreateOpportunity = async (id: string) => {
     // מסמנים את הליד כ-converted ומסירים מהרשימה
     // (בשלב הבא יחובר ליצירת הזדמנות אמיתית)
-    const { error } = await supabase
-      .from('leads')
+    const { error } = await (supabase.from('leads') as any)
       .update({ status: 'converted' })
       .eq('id', id)
     if (!error) {

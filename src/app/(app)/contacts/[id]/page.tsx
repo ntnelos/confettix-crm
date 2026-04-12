@@ -88,7 +88,7 @@ export default function ContactDetailsPage() {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את איש הקשר "${contact?.name}" לצמיתות?`)) return
     
     setLoading(true)
-    const { error } = await supabase.from('contacts').delete().eq('id', id)
+    const { error } = await (supabase.from('contacts') as any).delete().eq('id', id)
     if (error) {
       alert(`שגיאה במחיקת איש הקשר: ${error.message}`)
       setLoading(false)

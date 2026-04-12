@@ -78,7 +78,7 @@ export default function OpportunityDetailsPage() {
   const handleDeleteOpp = async () => {
     if (!window.confirm(`האם למחוק את ההזדמנות "${opp?.subject}" לצמיתות?`)) return
     setLoading(true)
-    const { error } = await supabase.from('opportunities').delete().eq('id', id)
+    const { error } = await (supabase.from('opportunities') as any).delete().eq('id', id)
     if (error) alert(error.message)
     else router.push('/opportunities')
   }

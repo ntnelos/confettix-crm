@@ -52,7 +52,7 @@ function NewOpportunityForm() {
 
   const handleCreateOrg = async () => {
     if (!newOrgName.trim()) return
-    const { data, error } = await supabase.from('organizations').insert({ name: newOrgName.trim() }).select().single()
+    const { data, error } = await (supabase.from('organizations') as any).insert({ name: newOrgName.trim() }).select().single()
     if (data) {
       setOrganizations(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(prev => ({ ...prev, organization_id: data.id }))

@@ -54,7 +54,7 @@ export default function OrganizationsPage() {
   const handleDeleteOrg = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את הארגון "${name}" לצמיתות?`)) return
     
-    const { error } = await supabase.from('organizations').delete().eq('id', id)
+    const { error } = await (supabase.from('organizations') as any).delete().eq('id', id)
     if (!error) {
       setOrgs(prev => prev.filter(o => o.id !== id))
     } else {

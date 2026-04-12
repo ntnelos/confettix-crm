@@ -113,7 +113,7 @@ export default function OrganizationDetailsPage() {
       return
     }
 
-    const { data, error } = await supabase.from('delivery_addresses').insert({
+    const { data, error } = await (supabase.from('delivery_addresses') as any).insert({
       organization_id: id,
       street: newAddress.street,
       city: newAddress.city,
@@ -135,7 +135,7 @@ export default function OrganizationDetailsPage() {
       return
     }
 
-    const { data, error } = await supabase.from('contacts').insert({
+    const { data, error } = await (supabase.from('contacts') as any).insert({
       organization_id: id,
       name: newContact.name,
       email: newContact.email || null,
@@ -156,7 +156,7 @@ export default function OrganizationDetailsPage() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.from('organizations').delete().eq('id', id)
+    const { error } = await (supabase.from('organizations') as any).delete().eq('id', id)
     if (error) {
       alert(`שגיאה במחיקת הארגון: ${error.message}`)
       setLoading(false)
