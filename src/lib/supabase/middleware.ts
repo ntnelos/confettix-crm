@@ -37,8 +37,10 @@ export async function updateSession(request: NextRequest) {
   // Protected routes - redirect to login if not authenticated
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
                      request.nextUrl.pathname.startsWith('/register')
+  const isQuotePreview = request.nextUrl.pathname.startsWith('/quotes/') &&
+                         request.nextUrl.pathname.includes('/preview')
   
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isQuotePreview) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
