@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 interface Quote {
   id: string; name: string; quote_number: string; opportunity_id: string
@@ -15,7 +14,7 @@ interface QuoteItem {
 }
 interface Contact { first_name: string; last_name: string }
 interface Organization { name: string }
-interface Opportunity { subject: string; contact_id: string; organization_id: string }
+interface Opportunity { subject: string }
 
 const GiftIcon = () => (
   <span style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -31,7 +30,6 @@ const GiftIcon = () => (
 
 export default function QuotePreviewPage() {
   const { quoteId } = useParams<{ quoteId: string }>()
-  const supabase = createClient()
 
   const [quote, setQuote]     = useState<Quote | null>(null)
   const [items, setItems]     = useState<QuoteItem[]>([])
@@ -39,6 +37,7 @@ export default function QuotePreviewPage() {
   const [contact, setContact] = useState<Contact | null>(null)
   const [org, setOrg]         = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState('')
 
   const [waPhone, setWaPhone]               = useState('')
   const [showWaInput, setShowWaInput]       = useState(false)
@@ -46,40 +45,18 @@ export default function QuotePreviewPage() {
   const [showEmailInput, setShowEmailInput] = useState(false)
 
   useEffect(() => {
-    const load = async () => {
-      // 1. Quote
-      const { data: qData } = await (supabase.from('quotes') as any)
-        .select('*').eq('id', quoteId).single()
-      if (!qData) { setLoading(false); return }
-      setQuote(qData)
-
-      // 2. Items
-      const { data: iData } = await (supabase.from('quote_items') as any)
-        .select('*').eq('quote_id', quoteId).order('created_at')
-      setItems(iData || [])
-
-      // 3. Opportunity + Contact (join) + Org
-      if (qData.opportunity_id) {
-        // Use explicit FK hints for the joins
-        const { data: oppData } = await (supabase.from('opportunities') as any)
-          .select('subject, contact_id, organization_id, contacts!contact_id(first_name, last_name), organizations!organization_id(name)')
-          .eq('id', qData.opportunity_id)
-          .single()
-
-        if (oppData) {
-          setOpp({ subject: oppData.subject, contact_id: oppData.contact_id, organization_id: oppData.organization_id })
-          
-          // Supabase join returns nested object - handle both array and object cases
-          const contactData = Array.isArray(oppData.contacts) ? oppData.contacts[0] : oppData.contacts
-          const orgData = Array.isArray(oppData.organizations) ? oppData.organizations[0] : oppData.organizations
-          
-          if (contactData?.first_name) setContact(contactData)
-          if (orgData?.name) setOrg(orgData)
-        }
-      }
-      setLoading(false)
-    }
-    load()
+    fetch(`/api/quote-preview/${quoteId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setError(d.error); setLoading(false); return }
+        setQuote(d.quote)
+        setItems(d.items || [])
+        setOpp(d.opp)
+        setContact(d.contact)
+        setOrg(d.org)
+        setLoading(false)
+      })
+      .catch(() => { setError('שגיאה בטעינת הנתונים'); setLoading(false) })
   }, [quoteId])
 
   const handlePrint = () => window.print()
@@ -87,18 +64,14 @@ export default function QuotePreviewPage() {
   const handleWhatsApp = () => {
     if (!waPhone) return
     const phone = waPhone.replace(/\D/g, '').replace(/^0/, '972')
-    const msg = encodeURIComponent(
-      `שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס`
-    )
+    const msg = encodeURIComponent(`שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס`)
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank')
   }
 
   const handleEmail = () => {
     if (!emailTo) return
     const subject = encodeURIComponent(`הצעת מחיר ${quote?.quote_number || ''} - קונפטיקס`)
-    const body = encodeURIComponent(
-      `שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס\nמתנות ממותגות ואירועים\n052-8350600\noffice@confettix.co.il`
-    )
+    const body = encodeURIComponent(`שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס\nמתנות ממותגות ואירועים\n052-8350600\noffice@confettix.co.il`)
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`
   }
 
@@ -106,7 +79,7 @@ export default function QuotePreviewPage() {
     new Date(d).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>טוען...</div>
-  if (!quote)  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>הצעה לא נמצאה</div>
+  if (error || !quote) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>{error || 'הצעה לא נמצאה'}</div>
 
   const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : ''
   const shipping = Number(quote.shipping_cost) || 0
@@ -150,7 +123,6 @@ export default function QuotePreviewPage() {
           box-shadow: 0 4px 30px rgba(0,0,0,.12); border-radius: 4px;
         }
 
-        /* Header: direction:ltr so logo = left, meta = right */
         .doc-header {
           display: flex; flex-direction: row; direction: ltr;
           justify-content: space-between; align-items: flex-start;
@@ -195,7 +167,7 @@ export default function QuotePreviewPage() {
         }
       `}</style>
 
-      {/* ── Toolbar ── */}
+      {/* Toolbar */}
       <div className="send-toolbar">
         <span className="tb-label">שלח הצעה:</span>
 
@@ -240,10 +212,10 @@ export default function QuotePreviewPage() {
         </button>
       </div>
 
-      {/* ── Document ── */}
+      {/* Document */}
       <div className="quote-doc">
 
-        {/* Header */}
+        {/* Header: logo LEFT (direction:ltr on container), meta RIGHT */}
         <div className="doc-header">
           <div className="logo-box">
             <img src="/confettix-logo.png" alt="קונפטיקס"
@@ -268,9 +240,9 @@ export default function QuotePreviewPage() {
           <thead>
             <tr>
               <th style={{ width: '25%' }}>מוצר</th>
-              <th style={{ width: '32%' }}>תיאור</th>
+              <th style={{ width: '33%' }}>תיאור</th>
               <th style={{ width: '8%', textAlign: 'center' }}>כמות</th>
-              <th style={{ width: '15%', textAlign: 'center' }}>מחיר</th>
+              <th style={{ width: '14%', textAlign: 'center' }}>מחיר</th>
               <th style={{ width: '20%', textAlign: 'center' }}>סה״כ</th>
             </tr>
           </thead>

@@ -51,6 +51,8 @@ export async function GET(request: Request) {
     const data = await response.json()
     
     // Transform into a simplified structure for the CRM frontend
+    const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+
     const products = data.map((item: any) => ({
       id: item.id.toString(),
       name: item.name,
@@ -59,8 +61,9 @@ export async function GET(request: Request) {
       sku: item.sku || '',
       permalink: item.permalink,
       image_url: item.images && item.images.length > 0 ? item.images[0].src : null,
-      short_description: item.short_description || '',
-      description: item.description || ''
+      // description first, short_description as fallback
+      short_description: stripHtml(item.short_description || ''),
+      description: stripHtml(item.description || item.short_description || '')
     }))
 
     return NextResponse.json({ products })
