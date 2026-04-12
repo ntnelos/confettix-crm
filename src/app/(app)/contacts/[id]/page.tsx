@@ -29,6 +29,7 @@ interface Contact {
   notes: string | null
   organization_id: string | null
   organizations?: Organization | null
+  morning_id: string | null
   created_at: string
 }
 
