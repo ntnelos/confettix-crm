@@ -29,7 +29,12 @@ export default function OrderCheckoutPage() {
 
   // Address State
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
-  const [newAddress, setNewAddress] = useState({ street: '', city: '', contact_name: '', contact_phone: '' })
+  const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
+  
+  // Contact details
+  const [contactName, setContactName] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
 
   // Signature
   const [signature, setSignature] = useState<string | null>(null)
@@ -150,16 +155,33 @@ export default function OrderCheckoutPage() {
         {/* Left Side: Forms */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Header */}
-          <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
-            <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה מול <strong>{org?.name || 'לקוח מזדמן'}</strong>.</p>
+          <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <div>
+               <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
+               <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה מול <strong>{org?.name || 'לקוח מזדמן'}</strong>.</p>
+             </div>
+             <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🖨️ הדפס
+                </button>
+                <button onClick={() => {
+                  if (navigator.share) {
+                     navigator.share({ title: 'הזמנה לאישור', url: window.location.href })
+                  } else {
+                     navigator.clipboard.writeText(window.location.href)
+                     alert('הקישור הועתק ללוח!')
+                  }
+                }} style={{ padding: '8px 16px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🔗 שתף
+                </button>
+             </div>
           </div>
 
           {/* Form: Invoice details */}
           <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
-              פרטי חשבונית
+              פרטי חשבונית ולקוח
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
@@ -184,11 +206,25 @@ export default function OrderCheckoutPage() {
                 />
               </div>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>שם לקוח / איש קשר</label>
+                <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="שם איש קשר" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>טלפון</label>
+                <input type="tel" dir="ltr" value={contactPhone} onChange={e => setContactPhone(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="טלפון" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>אימייל</label>
+                <input type="email" dir="ltr" value={contactEmail} onChange={e => setContactEmail(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="אימייל" />
+              </div>
+            </div>
           </div>
 
           {/* Form: Delivery */}
           <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
               כתובת אספקה
             </h2>
@@ -213,6 +249,10 @@ export default function OrderCheckoutPage() {
 
             {selectedAddressId === 'new' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8fafc', padding: 20, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>תווית הכתובת (למשל: סניף מרכזי)</label>
+                  <input type="text" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="סניף / ייעוד הכתובת" />
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>עיר <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="עיר" />
@@ -234,7 +274,7 @@ export default function OrderCheckoutPage() {
           </div>
 
           {/* Form: Payment Method */}
-          <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
               אמצעי תשלום
@@ -262,16 +302,21 @@ export default function OrderCheckoutPage() {
 
           {/* Form: Signature & Actions */}
           <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
               חתימה מרחוק
             </h2>
-            <div style={{ marginBottom: 24 }}>
+            <div className="no-print" style={{ marginBottom: 24 }}>
               <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>אנא חתום את שמך כמורשה חתימה לאישור כל תנאי ההזמנה.</p>
               <SignaturePad onSignatureChange={setSignature} />
             </div>
 
+            <div className="print-only" style={{ display: 'none', marginTop: 40, marginBottom: 60 }}>
+               <strong>חתימת הלקוח המאשר: </strong> <span style={{ display: 'inline-block', width: 300, borderBottom: '1px solid black' }}></span>
+            </div>
+
             <button
+              className="no-print"
               onClick={handleSubmit}
               disabled={isSubmitting}
               style={{ width: '100%', padding: '16px 24px', background: isSubmitting ? '#94a3b8' : '#4caf50', color: 'white', border: 'none', borderRadius: 12, fontSize: 18, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(76, 175, 80, 0.4)', transition: 'all 0.2s' }}
@@ -326,6 +371,30 @@ export default function OrderCheckoutPage() {
         </div>
 
       </main>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body { 
+            background: white !important; 
+            padding: 0 !important;
+          }
+          main { 
+            max-width: 100% !important; 
+            display: block !important; 
+          }
+          .no-print { 
+            display: none !important; 
+          }
+          .print-only { 
+            display: block !important; 
+          }
+          div[style*="boxShadow"] {
+            box-shadow: none !important;
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 20px !important;
+          }
+          h1, h2, h3 { color: black !important; }
+        }
+      `}} />
     </div>
   )
 }
