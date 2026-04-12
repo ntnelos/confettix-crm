@@ -26,6 +26,9 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
   const [recentOpps, setRecentOpps] = useState<any[]>([])
   const [isDuplicating, setIsDuplicating] = useState(false)
 
+  // Local shipping input state to prevent reset on re-render
+  const [shippingInput, setShippingInput] = useState<Record<string, string>>({})
+
   useEffect(() => {
     fetchQuotes()
   }, [opportunityId])
@@ -515,13 +518,25 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                  )}
                  
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 20, gap: 16, flexWrap: 'wrap' }}>
-                    {/* Duplicate buttons */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שכפול הצעה:</div>
-                      <button
-                        onClick={() => openDupModal(activeQuoteId)}
-                        style={{ padding: '8px 14px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
-                      >⊞ אפשרויות שכפול</button>
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שכפול הצעה:</div>
+                        <button
+                          onClick={() => openDupModal(activeQuoteId)}
+                          style={{ padding: '8px 14px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                        >⊞ אפשרויות שכפול</button>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחה:</div>
+                        <button
+                          onClick={() => window.open(`/quotes/${activeQuoteId}/preview`, '_blank')}
+                          style={{ padding: '8px 16px', fontSize: 12, background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                          שלח הצעה
+                        </button>
+                      </div>
                     </div>
 
                     {/* Totals */}
@@ -532,12 +547,18 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                        </div>
                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
                           <span>עלות משלוח:</span>
-                          <div style={{ display: 'flex', alignItems: 'center', width: 80 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', width: 90 }}>
                             <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>₪</span>
                             <input
                                type="number"
-                               value={quotes.find(q=>q.id===activeQuoteId)?.shipping_cost || 0}
-                               onChange={e => updateQuoteShipping(activeQuoteId, parseFloat(e.target.value)||0)}
+                               value={shippingInput[activeQuoteId] ?? (quotes.find(q=>q.id===activeQuoteId)?.shipping_cost ?? 0)}
+                               onChange={e => {
+                                 setShippingInput(prev => ({ ...prev, [activeQuoteId]: e.target.value }))
+                               }}
+                               onBlur={e => {
+                                 const val = parseFloat(e.target.value) || 0
+                                 updateQuoteShipping(activeQuoteId, val)
+                               }}
                                style={{ width: '100%', textAlign: 'left', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4 }}
                             />
                           </div>
