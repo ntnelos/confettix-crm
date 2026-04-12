@@ -43,8 +43,15 @@ export async function GET(
          addresses = addrs || []
      }
   }
+  
+  // 4. Fetch the payment method from opportunity
+  let payment_method = null;
+  if (order.opportunity_id) {
+    const { data: oppForPay } = await supabase.from('opportunities').select('payment_method').eq('id', order.opportunity_id).single()
+    if (oppForPay) payment_method = oppForPay.payment_method;
+  }
 
-  return NextResponse.json({ order, quote, items: items || [], org, addresses })
+  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method })
 }
 
 export async function POST(
@@ -88,11 +95,26 @@ export async function POST(
       }
     }
 
-    // 3. Update the Order
+    // 3. Update the Organization (if exists)
+    let oppOrgId = null;
+    const { data: oppForOrg } = await supabase.from('opportunities').select('organization_id').eq('id', order.opportunity_id).single()
+    if (oppForOrg?.organization_id) {
+       oppOrgId = oppForOrg.organization_id;
+       await supabase.from('organizations').update({
+         invoice_company_name,
+         company_number
+       }).eq('id', oppOrgId)
+    }
+
+    // 4. Update the Opportunity (payment method)
+    if (order.opportunity_id) {
+      await supabase.from('opportunities').update({
+        payment_method
+      }).eq('id', order.opportunity_id)
+    }
+
+    // 5. Update the Order
     const { data: updatedOrder, error } = await supabase.from('orders').update({
-       invoice_company_name,
-       company_number,
-       payment_method,
        delivery_address_id: final_address_id || null,
        signature_data,
        total_amount, // The final amount including the check fee if applicable

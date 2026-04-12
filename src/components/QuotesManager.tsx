@@ -5,8 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { useRouter } from 'next/navigation'
 
-import { useRouter } from 'next/navigation'
-
 type Quote = Database['public']['Tables']['quotes']['Row'] & { orders?: any[] }
 type QuoteItem = Database['public']['Tables']['quote_items']['Row']
 

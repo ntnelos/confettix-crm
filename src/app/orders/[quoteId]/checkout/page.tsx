@@ -61,8 +61,8 @@ export default function OrderCheckoutPage() {
            setSelectedAddressId('new')
         }
 
-        if (json.order.payment_method) {
-            setPaymentMethod(json.order.payment_method)
+        if (json.payment_method) {
+            setPaymentMethod(json.payment_method)
         }
 
       } catch (err: any) {
