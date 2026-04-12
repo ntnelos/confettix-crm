@@ -104,7 +104,9 @@ export default function QuotePreviewPage() {
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>טוען...</div>
   if (!quote)  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>הצעה לא נמצאה</div>
 
-  const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : ''
+  const contactName = contact
+    ? `${contact.first_name} ${contact.last_name || ''}`.trim()
+    : opp?.subject || ''
   const shipping = Number(quote.shipping_cost) || 0
 
   return (
@@ -146,9 +148,10 @@ export default function QuotePreviewPage() {
           box-shadow: 0 4px 30px rgba(0,0,0,.12); border-radius: 4px;
         }
 
-        /* Header – logo on LEFT, meta on RIGHT. Use ltr flex so first child = left */
+        /* Header – logo physically LEFT, meta RIGHT.
+           direction:ltr on container so first child = left side */
         .doc-header {
-          display: flex; flex-direction: row;
+          display: flex; flex-direction: row; direction: ltr;
           justify-content: space-between; align-items: flex-start;
           margin-bottom: 28px;
         }
@@ -247,11 +250,11 @@ export default function QuotePreviewPage() {
               onError={e => { e.currentTarget.style.display = 'none' }} />
           </div>
 
-          {/* Meta */}
-          <div className="doc-meta">
+          {/* Meta – force back to rtl for right-aligned text */}
+          <div className="doc-meta" style={{ direction: 'rtl', textAlign: 'right' }}>
             {contactName && (
               <div>
-                <span className="meta-to-label">לכבוד: </span>
+                <span className="meta-to-label" style={{ fontWeight: 700 }}>לכבוד: </span>
                 {contactName}
               </div>
             )}

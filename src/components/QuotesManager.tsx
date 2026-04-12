@@ -201,6 +201,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     
     const { data } = await (supabase.from('quotes') as any).update({
        subtotal,
+       shipping_cost: shipping,
        vat_rate: 18,
        total_with_vat: totalWithVat
     }).eq('id', quote.id).select().single()
