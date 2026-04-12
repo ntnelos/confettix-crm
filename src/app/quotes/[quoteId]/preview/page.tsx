@@ -40,37 +40,35 @@ export default function QuotePreviewPage() {
   const [org, setOrg]         = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const [waPhone, setWaPhone]             = useState('')
-  const [showWaInput, setShowWaInput]     = useState(false)
-  const [emailTo, setEmailTo]             = useState('')
+  const [waPhone, setWaPhone]               = useState('')
+  const [showWaInput, setShowWaInput]       = useState(false)
+  const [emailTo, setEmailTo]               = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
 
   useEffect(() => {
     const load = async () => {
+      // 1. Quote
       const { data: qData } = await (supabase.from('quotes') as any)
         .select('*').eq('id', quoteId).single()
       if (!qData) { setLoading(false); return }
       setQuote(qData)
 
+      // 2. Items
       const { data: iData } = await (supabase.from('quote_items') as any)
         .select('*').eq('quote_id', quoteId).order('created_at')
       setItems(iData || [])
 
+      // 3. Opportunity + Contact (join) + Org
       if (qData.opportunity_id) {
-        const { data: oppData } = await (supabase.from('opportunities') as any)
-          .select('subject, contact_id, organization_id').eq('id', qData.opportunity_id).single()
+        const { data: oppData, error: oppErr } = await (supabase.from('opportunities') as any)
+          .select('subject, contact_id, organization_id, contacts(first_name, last_name), organizations(name)')
+          .eq('id', qData.opportunity_id).single()
+
         if (oppData) {
-          setOpp(oppData)
-          if (oppData.contact_id) {
-            const { data: c } = await (supabase.from('contacts') as any)
-              .select('first_name, last_name').eq('id', oppData.contact_id).single()
-            setContact(c)
-          }
-          if (oppData.organization_id) {
-            const { data: o } = await (supabase.from('organizations') as any)
-              .select('name').eq('id', oppData.organization_id).single()
-            setOrg(o)
-          }
+          setOpp({ subject: oppData.subject, contact_id: oppData.contact_id, organization_id: oppData.organization_id })
+          // contacts and organizations come as joined objects
+          if (oppData.contacts) setContact(oppData.contacts)
+          if (oppData.organizations) setOrg(oppData.organizations)
         }
       }
       setLoading(false)
@@ -98,15 +96,13 @@ export default function QuotePreviewPage() {
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`
   }
 
-  const formatDate = (d: string) =>
+  const fmt = (d: string) =>
     new Date(d).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>טוען...</div>
   if (!quote)  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>הצעה לא נמצאה</div>
 
-  const contactName = contact
-    ? `${contact.first_name} ${contact.last_name || ''}`.trim()
-    : opp?.subject || ''
+  const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : ''
   const shipping = Number(quote.shipping_cost) || 0
 
   return (
@@ -143,13 +139,12 @@ export default function QuotePreviewPage() {
         .inline-input::placeholder { color: rgba(255,255,255,.45); }
 
         .quote-doc {
-          max-width: 800px; margin: 28px auto 60px;
+          max-width: 830px; margin: 28px auto 60px;
           background: #fff; padding: 48px 52px;
           box-shadow: 0 4px 30px rgba(0,0,0,.12); border-radius: 4px;
         }
 
-        /* Header – logo physically LEFT, meta RIGHT.
-           direction:ltr on container so first child = left side */
+        /* Header: direction:ltr so logo = left, meta = right */
         .doc-header {
           display: flex; flex-direction: row; direction: ltr;
           justify-content: space-between; align-items: flex-start;
@@ -157,12 +152,12 @@ export default function QuotePreviewPage() {
         }
         .logo-box { width: 160px; height: 110px; display: flex; align-items: center; }
         .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        .doc-meta { font-size: 13px; color: #333; text-align: right; line-height: 1.75; }
-        .doc-meta .meta-to-label { font-weight: 700; }
+        .doc-meta { font-size: 13px; color: #333; text-align: right; line-height: 1.75; direction: rtl; }
+        .doc-meta .lkavod { font-weight: 700; }
+        .doc-meta .org-name { color: #555; }
         .doc-meta .meta-date { color: #888; font-size: 12px; margin-top: 4px; }
 
-        .doc-title { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 6px; color: #111; }
+        .doc-title    { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 6px; color: #111; }
         .doc-subtitle { text-align: center; font-size: 14px; color: #777; margin-bottom: 24px; border-bottom: 2px solid #eee; padding-bottom: 16px; }
 
         .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 24px; }
@@ -170,7 +165,7 @@ export default function QuotePreviewPage() {
         .quote-table thead th { padding: 10px 12px; text-align: right; font-weight: 700; color: #222; border: 1px solid #bbb; }
         .quote-table tbody tr { border-bottom: 1px solid #e5e5e5; }
         .quote-table tbody tr:nth-child(even) { background: #fafafa; }
-        .quote-table tbody td { padding: 10px 12px; vertical-align: middle; color: #333; border: 1px solid #e5e5e5; }
+        .quote-table tbody td { padding: 10px 12px; vertical-align: top; color: #333; border: 1px solid #e5e5e5; }
         .shipping-row td { background: #f0f0f0 !important; font-style: italic; }
 
         .disclaimers {
@@ -181,10 +176,10 @@ export default function QuotePreviewPage() {
         .disclaimers li { margin-right: 14px; }
 
         .doc-footer { margin-top: 36px; text-align: center; border-top: 2px solid #e5e5e5; padding-top: 24px; }
-        .doc-footer .footer-greeting { font-size: 13px; color: #666; margin-bottom: 4px; }
-        .doc-footer .footer-name { font-size: 22px; font-weight: 800; color: #111; }
-        .doc-footer .footer-tagline { font-size: 13px; color: #888; margin-top: 2px; }
-        .doc-footer .footer-contact { font-size: 13px; color: #666; margin-top: 8px; }
+        .doc-footer .footer-greeting  { font-size: 13px; color: #666; margin-bottom: 4px; }
+        .doc-footer .footer-name      { font-size: 22px; font-weight: 800; color: #111; }
+        .doc-footer .footer-tagline   { font-size: 13px; color: #888; margin-top: 2px; }
+        .doc-footer .footer-contact   { font-size: 13px; color: #666; margin-top: 8px; }
         .logo-footer { width: 60px; margin: 12px auto 0; display: block; }
 
         @media print {
@@ -242,24 +237,19 @@ export default function QuotePreviewPage() {
       {/* ── Document ── */}
       <div className="quote-doc">
 
-        {/* Header: logo LEFT, meta RIGHT */}
+        {/* Header */}
         <div className="doc-header">
-          {/* Logo – no border, physically first so it renders on the left */}
-          <div className="logo-box" style={{ direction: 'ltr' }}>
+          <div className="logo-box">
             <img src="/confettix-logo.png" alt="קונפטיקס"
               onError={e => { e.currentTarget.style.display = 'none' }} />
           </div>
-
-          {/* Meta – force back to rtl for right-aligned text */}
-          <div className="doc-meta" style={{ direction: 'rtl', textAlign: 'right' }}>
-            {contactName && (
-              <div>
-                <span className="meta-to-label" style={{ fontWeight: 700 }}>לכבוד: </span>
-                {contactName}
-              </div>
-            )}
-            {org?.name && <div style={{ color: '#555' }}>{org.name}</div>}
-            <div className="meta-date">{formatDate(quote.created_at)}</div>
+          <div className="doc-meta">
+            {contactName
+              ? <div><span className="lkavod">לכבוד: </span>{contactName}</div>
+              : opp?.subject && <div><span className="lkavod">נושא: </span>{opp.subject}</div>
+            }
+            {org?.name && <div className="org-name">{org.name}</div>}
+            <div className="meta-date">{fmt(quote.created_at)}</div>
           </div>
         </div>
 
@@ -271,11 +261,11 @@ export default function QuotePreviewPage() {
         <table className="quote-table">
           <thead>
             <tr>
-              <th style={{ width: '34%' }}>מוצר</th>
-              <th style={{ width: '30%' }}>תיאור</th>
-              <th style={{ width: '9%', textAlign: 'center' }}>כמות</th>
-              <th style={{ width: '12%', textAlign: 'center' }}>מחיר</th>
-              <th style={{ width: '15%', textAlign: 'center' }}>סה״כ</th>
+              <th style={{ width: '25%' }}>מוצר</th>
+              <th style={{ width: '32%' }}>תיאור</th>
+              <th style={{ width: '8%', textAlign: 'center' }}>כמות</th>
+              <th style={{ width: '15%', textAlign: 'center' }}>מחיר</th>
+              <th style={{ width: '20%', textAlign: 'center' }}>סה״כ</th>
             </tr>
           </thead>
           <tbody>
@@ -291,19 +281,16 @@ export default function QuotePreviewPage() {
                     {item.product_name}
                   </div>
                 </td>
-                <td style={{ fontSize: 12, color: '#555' }}>{item.description || ''}</td>
+                <td style={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap' }}>{item.description || ''}</td>
                 <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                 <td style={{ textAlign: 'center' }}>₪{Number(item.unit_price).toFixed(2)}</td>
                 <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{Number(item.line_total).toFixed(2)}</td>
               </tr>
             ))}
 
-            {/* Shipping row */}
             {shipping > 0 && (
               <tr className="shipping-row">
-                <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 30 }}></span> משלוח
-                </div></td>
+                <td><div style={{ display:'flex', alignItems:'center', gap:8 }}><span style={{width:30}}/> משלוח</div></td>
                 <td></td>
                 <td style={{ textAlign: 'center' }}>1</td>
                 <td style={{ textAlign: 'center' }}>₪{shipping.toFixed(2)}</td>

@@ -132,6 +132,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
       .insert({
         quote_id: quoteId,
         product_name,
+        description: wcProduct ? (wcProduct.short_description || wcProduct.description || '') : '',
         quantity,
         unit_price,
         discount_percent: 0,
@@ -434,12 +435,13 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                        <thead>
                          <tr>
-                           <th style={{ textAlign: 'right', padding: 10, borderBottom: '2px solid var(--border)' }}>תיאור פריט</th>
-                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 80 }}>כמות</th>
-                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 100 }}>מחיר יחידה</th>
-                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 100 }}>הנחה (%)</th>
-                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 100 }}>סה״כ שורה</th>
-                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 60 }}></th>
+                           <th style={{ textAlign: 'right', padding: 10, borderBottom: '2px solid var(--border)' }}>שם הפריט</th>
+                           <th style={{ textAlign: 'right', padding: 10, borderBottom: '2px solid var(--border)', minWidth: 150 }}>תיאור פריט</th>
+                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 70 }}>כמות</th>
+                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 90 }}>מחיר יחידה</th>
+                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 80 }}>הנחה (%)</th>
+                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 90 }}>סה״כ שורה</th>
+                           <th style={{ textAlign: 'center', padding: 10, borderBottom: '2px solid var(--border)', width: 50 }}></th>
                          </tr>
                        </thead>
                        <tbody>
@@ -479,6 +481,17 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                                   <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 44, display: 'block', marginTop: 2 }}>🔗 צפה באתר</a>
                                 )}
                               </td>
+
+                               {/* Description column */}
+                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)', verticalAlign: 'top' }}>
+                                 <textarea
+                                   value={item.description || ''}
+                                   onChange={e => updateItem(activeQuoteId, item.id, 'description', e.target.value)}
+                                   rows={2}
+                                   style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 12, color: 'var(--text-secondary)', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, outline: 'none' }}
+                                   placeholder="תיאור חופשי..."
+                                 />
+                               </td>
 
 
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
