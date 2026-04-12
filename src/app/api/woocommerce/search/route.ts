@@ -34,7 +34,11 @@ export async function GET(request: Request) {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; ConfettixCRM/1.0)',
+        'Accept': 'application/json',
+        'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8',
+        'Cache-Control': 'no-cache',
       }
     })
 
