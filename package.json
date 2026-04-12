@@ -6,11 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import:zoho": "tsx scripts/import_zoho.ts",
+    "check:user": "tsx scripts/check_user.ts",
+    "sample:data": "tsx scripts/sample_data.ts",
+    "assign:records": "tsx scripts/assign_records.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
+    "csv-parser": "^3.2.0",
+    "fs": "^0.0.1-security",
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -21,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

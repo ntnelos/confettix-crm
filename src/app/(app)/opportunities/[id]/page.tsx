@@ -61,9 +61,10 @@ export default function OpportunityDetailsPage() {
         .single()
       
       if (oppErr || !oppData) {
-        console.error("Opp not found", oppErr)
-        router.push('/opportunities')
-        return
+        console.error("Opp not found! ID attempted:", id);
+        console.error("Error from Supabase:", oppErr);
+        setLoading(false);
+        return;
       }
       
       setOpp(oppData as Opportunity)
@@ -84,21 +85,24 @@ export default function OpportunityDetailsPage() {
         .limit(1)
         .single()
       
-         setSignedOrder(orderData)
-         if (orderData.invoices && orderData.invoices.length > 0) {
-           setInvoice(orderData.invoices[0])
-         }
-         if (orderData.delivery_address_id) {
-           const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', orderData.delivery_address_id).single()
-           if (addr) setDeliveryAddress(addr)
-         }
+      if (orderData) {
+        setSignedOrder(orderData)
+        if (orderData.invoices && orderData.invoices.length > 0) {
+          setInvoice(orderData.invoices[0])
+        }
+        if (orderData.delivery_address_id) {
+          const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', orderData.delivery_address_id).single()
+          if (addr) setDeliveryAddress(addr)
+        }
       }
       
-      setLoading(false)
+      setLoading(false);
     }
 
-    if (id) loadData()
-  }, [id, router, supabase])
+    if (id) {
+      loadData();
+    }
+  }, [id, router, supabase]);
 
   const handleDeleteOpp = async () => {
     if (!window.confirm(`האם למחוק את ההזדמנות "${opp?.subject}" לצמיתות?`)) return

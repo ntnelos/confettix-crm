@@ -602,6 +602,8 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                       {(() => {
                         const isOrder = activeQuote?.orders && activeQuote.orders.length > 0;
+                        const opportunityHasSignedOrder = quotes.some(quote => quote.orders?.some((or: any) => or.status === 'signed'));
+
                         if (isOrder) {
                           return (
                             <>
@@ -632,16 +634,15 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                             </>
                           )
                         }
-                      
-                      const opportunityHasSignedOrder = quotes.some(quote => quote.orders?.some((or: any) => or.status === 'signed'));
-                      
-                      if (opportunityHasSignedOrder) {
-                        return (
-                          <div style={{ fontSize: 13, color: '#94a3b8', background: '#f8fafc', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0', fontWeight: 600 }}>
-                            קיימת הזמנה חתומה להזדמנות זו. לא ניתן להפיק הזמנות נוספות.
-                          </div>
-                        )
-                      }
+
+                        if (opportunityHasSignedOrder) {
+                          return (
+                            <div style={{ fontSize: 13, color: '#94a3b8', background: '#f8fafc', padding: '12px 16px', borderRadius: 8, border: '1px solid #e2e8f0', fontWeight: 600 }}>
+                              קיימת הזמנה חתומה להזדמנות זו. לא ניתן להפיק הזמנות נוספות.
+                            </div>
+                          )
+                        }
+
                         return (
                           <>
                             <div>
