@@ -41,6 +41,8 @@ export default function ContactDetailsPage() {
   const [contact, setContact] = useState<Contact | null>(null)
   const [loading, setLoading] = useState(true)
   
+  const [opportunities, setOpportunities] = useState<any[]>([])
+  
   // Organization Assignment Modal State
   const [organizations, setOrganizations] = useState<{id: string, name: string}[]>([])
   const [showOrgAssignModal, setShowOrgAssignModal] = useState(false)
@@ -77,6 +79,12 @@ export default function ContactDetailsPage() {
       
       const { data: addrs } = await addrQuery
       if (addrs) setAddresses(addrs)
+      
+      const { data: opps } = await supabase.from('opportunities')
+        .select('*')
+        .eq('contact_id', c.id)
+        .order('created_at', { ascending: false })
+      if (opps) setOpportunities(opps)
       
       setLoading(false)
     }
@@ -353,6 +361,36 @@ export default function ContactDetailsPage() {
                           )}
                         </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Opportunities Card */}
+            <div className="card">
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600 }}>הזדמנויות מקושרות</h2>
+                <span style={{ fontSize: 13, background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 12 }}>{opportunities.length}</span>
+              </div>
+              <div style={{ padding: 20 }}>
+                {opportunities.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>אין הזדמנויות לאיש קשר זה.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {opportunities.map(opp => (
+                      <Link key={opp.id} href={`/opportunities/${opp.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, border: '1px solid var(--border-light)', borderRadius: 12, textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'var(--surface)' }} onMouseOver={e => e.currentTarget.style.borderColor='var(--border-strong)'} onMouseOut={e => e.currentTarget.style.borderColor='var(--border-light)'}>
+                        <div>
+                           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{opp.subject}</div>
+                           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>נוצר ב: {new Date(opp.created_at).toLocaleDateString('he-IL')}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                           <div style={{ fontWeight: 700, fontSize: 14 }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
+                           <div style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, fontWeight: 600, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'var(--surface-2)', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)' }}>
+                             {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'בטיפול' : opp.status === 'won' ? 'זכייה' : 'בוטל'}
+                           </div>
+                        </div>
+                      </Link>
                     ))}
                   </div>
                 )}

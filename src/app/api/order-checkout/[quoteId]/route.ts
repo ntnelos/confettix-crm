@@ -118,10 +118,11 @@ export async function POST(
        }).eq('id', oppOrgId)
     }
 
-    // 4. Update the Opportunity (payment method)
+    // 4. Update the Opportunity (payment method & status)
     if (order.opportunity_id) {
       await supabase.from('opportunities').update({
-        payment_method
+        payment_method,
+        status: 'won'
       }).eq('id', order.opportunity_id)
     }
 

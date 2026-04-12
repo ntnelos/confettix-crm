@@ -220,12 +220,12 @@ export default function OrderCheckoutPage() {
 
         <div style={{ marginBottom: 40, marginTop: 20, fontSize: 13, lineHeight: 1.6, fontWeight: 700, paddingRight: 20 }}>
           <ul style={{ listStyleType: 'disc' }}>
-             <li>התאמת עיצוב מעיצובים קיימים, תוספת מיתוג של שם אישי, הקדשה ולוגו ללא תוספת תשלום.</li>
-             <li>עיצוב חדש בהתאמה - 500 ש"ח</li>
-             <li>אני מאשר/ת קבלת דיוורים מקונפטיקס</li>
+            <li>התאמת עיצוב מעיצובים קיימים, תוספת מיתוג של שם אישי, הקדשה ולוגו ללא תוספת תשלום.</li>
+            <li>עיצוב חדש בהתאמה - 500 ש"ח</li>
+            <li>אני מאשר/ת קבלת דיוורים מקונפטיקס</li>
           </ul>
           <div style={{ marginTop: 8 }}>
-             תשלום בהעברה בנקאית עם אישור הצעת המחיר
+            תשלום בהעברה בנקאית עם אישור הצעת המחיר
           </div>
         </div>
 
@@ -272,9 +272,9 @@ export default function OrderCheckoutPage() {
           <div style={{ marginBottom: 40, fontSize: 15 }}>
             <strong style={{ marginLeft: 8 }}>חתימה:</strong>
             {signature ? (
-               <img src={signature} alt="Signature" style={{ height: 50, display: 'inline-block', verticalAlign: 'bottom' }} />
+              <img src={signature} alt="Signature" style={{ height: 50, display: 'inline-block', verticalAlign: 'bottom' }} />
             ) : (
-               <span style={{ display: 'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
+              <span style={{ display: 'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
             )}
           </div>
         </div>
@@ -299,7 +299,7 @@ export default function OrderCheckoutPage() {
               <div>
                 <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
                 <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
-                <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה עבור <strong>{data?.opp_subject || quote?.name || 'לקוח מזדמן'}</strong>.</p>
+                <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>{data?.opp_subject || 'הזמנה'}&nbsp;<strong>{org.name}</strong></p>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>

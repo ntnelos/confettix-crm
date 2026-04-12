@@ -53,6 +53,7 @@ export default function OrganizationDetailsPage() {
   const [org, setOrg] = useState<Organization | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([])
+  const [opportunities, setOpportunities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddressModal, setShowAddressModal] = useState(false)
   const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
@@ -91,9 +92,18 @@ export default function OrganizationDetailsPage() {
         .from('delivery_addresses')
         .select('*')
         .eq('organization_id', id)
-
       if (addressesData) {
         setAddresses(addressesData as DeliveryAddress[])
+      }
+
+      // Fetch Opportunities
+      const { data: oppsData } = await supabase
+        .from('opportunities')
+        .select('*')
+        .eq('organization_id', id)
+        .order('created_at', { ascending: false })
+      if (oppsData) {
+        setOpportunities(oppsData)
       }
 
       setLoading(false)
@@ -335,12 +345,40 @@ export default function OrganizationDetailsPage() {
                 <h2 style={{ fontSize: 16, fontWeight: 600 }}>היסטוריה והערות</h2>
               </div>
               <div style={{ padding: '20px 0' }}>
-                {/* Communication history will go here */}
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
                   <div style={{ fontSize: 40, opacity: 0.2, marginBottom: 10 }}>📝</div>
                   טרם נשמרו הערות בפרופיל הארגון.
                 </div>
               </div>
+            </div>
+
+            {/* Opportunities Section */}
+            <div className="card">
+               <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <h2 style={{ fontSize: 16, fontWeight: 600 }}>הזדמנויות עסקיות ({opportunities.length})</h2>
+               </div>
+               <div style={{ padding: 20 }}>
+                 {opportunities.length === 0 ? (
+                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>אין הזדמנויות מקושרות לארגון זה.</div>
+                 ) : (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                     {opportunities.map(opp => (
+                       <Link key={opp.id} href={`/opportunities/${opp.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, border: '1px solid var(--border-light)', borderRadius: 12, textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'var(--surface)' }} onMouseOver={e => e.currentTarget.style.borderColor='var(--border-strong)'} onMouseOut={e => e.currentTarget.style.borderColor='var(--border-light)'}>
+                         <div>
+                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{opp.subject}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>נוצר ב: {new Date(opp.created_at).toLocaleDateString('he-IL')}</div>
+                         </div>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
+                            <div style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, fontWeight: 600, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'var(--surface-2)', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)' }}>
+                              {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'בטיפול' : opp.status === 'won' ? 'זכייה' : 'בוטל'}
+                            </div>
+                         </div>
+                       </Link>
+                     ))}
+                   </div>
+                 )}
+               </div>
             </div>
 
           </div>

@@ -41,6 +41,9 @@ export default function OpportunityDetailsPage() {
   const [updates, setUpdates] = useState<UpdateRecord[]>([])
   const [loading, setLoading] = useState(true)
   
+  const [signedOrder, setSignedOrder] = useState<any>(null)
+  const [deliveryAddress, setDeliveryAddress] = useState<any>(null)
+  
   // New Update Form
   const [newUpdate, setNewUpdate] = useState({ content: '', type: 'note' as any })
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false)
@@ -68,6 +71,22 @@ export default function OpportunityDetailsPage() {
         .order('created_at', { ascending: false })
       
       if (updatesData) setUpdates(updatesData as UpdateRecord[])
+
+      const { data: orderData } = await supabase.from('orders')
+        .select('*, quotes(quote_number)')
+        .eq('opportunity_id', id)
+        .eq('status', 'signed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      
+      if (orderData) {
+         setSignedOrder(orderData)
+         if (orderData.delivery_address_id) {
+           const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', orderData.delivery_address_id).single()
+           if (addr) setDeliveryAddress(addr)
+         }
+      }
       
       setLoading(false)
     }
@@ -430,6 +449,48 @@ export default function OpportunityDetailsPage() {
 
               </div>
             </div>
+
+            {signedOrder && (
+              <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid #86efac' }}>
+                <div className="card-header" style={{ borderBottom: '1px solid rgba(76, 175, 80, 0.2)', paddingBottom: 12 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    ✅ הזמנה אושרה ונחתמה
+                  </h2>
+                </div>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                   <div style={{ fontSize: 13, color: '#166534' }}>
+                     <strong>סה"כ אושר: </strong>
+                     ₪{parseFloat(signedOrder.total_amount || 0).toLocaleString()}
+                   </div>
+                   <div style={{ fontSize: 13, color: '#166534' }}>
+                     <strong>נחתם ב: </strong>
+                     {new Date(signedOrder.signed_at || signedOrder.updated_at).toLocaleString('he-IL')}
+                   </div>
+                   
+                   <a target="_blank" href={`/orders/${signedOrder.quote_id}/checkout`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#16a34a', color: 'white', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
+                     👁️ צפו בהזמנה החתומה (PDF)
+                   </a>
+                </div>
+              </div>
+            )}
+
+            {deliveryAddress && (
+               <div className="card">
+                <div className="card-header" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: 12 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    🚚 כתובת אספקה נבחרה
+                  </h2>
+                </div>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+                   {deliveryAddress.label && <div><strong>תווית אספקה:</strong> {deliveryAddress.label}</div>}
+                   <div><strong>עיר:</strong> {deliveryAddress.city}</div>
+                   <div><strong>רחוב:</strong> {deliveryAddress.street}</div>
+                   {(deliveryAddress.contact_name || deliveryAddress.contact_phone) && (
+                     <div><strong>איש קשר לאספקה:</strong> {deliveryAddress.contact_name} {deliveryAddress.contact_phone}</div>
+                   )}
+                </div>
+               </div>
+            )}
           </div>
 
         </div>
