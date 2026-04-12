@@ -12,7 +12,7 @@ interface QuoteItem {
   unit_price: number; discount_percent: number; line_total: number
   image_url?: string; woo_product_url?: string
 }
-interface Contact { first_name: string; last_name: string }
+interface Contact { name: string }
 interface Organization { name: string }
 interface Opportunity { subject: string }
 
@@ -81,7 +81,7 @@ export default function QuotePreviewPage() {
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>טוען...</div>
   if (error || !quote) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>{error || 'הצעה לא נמצאה'}</div>
 
-  const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : ''
+  const contactName = contact ? contact.name : ''
   const shipping = Number(quote.shipping_cost) || 0
 
   return (

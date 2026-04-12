@@ -32,6 +32,8 @@ interface DeliveryAddress {
   city: string
   zip_code: string | null
   notes: string | null
+  contact_name: string | null
+  contact_phone: string | null
 }
 
 interface Contact {
@@ -53,7 +55,7 @@ export default function OrganizationDetailsPage() {
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddressModal, setShowAddressModal] = useState(false)
-  const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '' })
+  const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
   
   const [showContactModal, setShowContactModal] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', email: '', mobile: '' })
@@ -118,13 +120,15 @@ export default function OrganizationDetailsPage() {
       organization_id: id,
       street: newAddress.street,
       city: newAddress.city,
-      label: newAddress.label || null
+      label: newAddress.label || null,
+      contact_name: newAddress.contact_name || null,
+      contact_phone: newAddress.contact_phone || null
     }).select().single()
     
     if (data) {
       setAddresses(prev => [...prev, data])
       setShowAddressModal(false)
-      setNewAddress({ label: '', street: '', city: '' })
+      setNewAddress({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
     } else if (error) {
       alert(`שגיאה בשמירת כתובת: ${error.message}`)
     }
@@ -461,6 +465,21 @@ export default function OrganizationDetailsPage() {
                           onSave={(val) => updateDeliveryAddress(addr.id, 'city', val)}
                        />
                      </div>
+                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                       <InlineEditableField
+                          label="שם איש קשר בכתובת"
+                          value={addr.contact_name}
+                          placeholder="למשל: דגנית"
+                          onSave={(val) => updateDeliveryAddress(addr.id, 'contact_name', val)}
+                       />
+                       <InlineEditableField
+                          label="טלפון איש קשר"
+                          value={addr.contact_phone}
+                          placeholder="למשל: 050-1234567"
+                          dir="ltr"
+                          onSave={(val) => updateDeliveryAddress(addr.id, 'contact_phone', val)}
+                       />
+                     </div>
                    </div>
                 ))}
               </div>
@@ -502,6 +521,27 @@ export default function OrganizationDetailsPage() {
                   onChange={e => setNewAddress(prev => ({...prev, city: e.target.value}))} 
                   placeholder="לדוגמה: תל אביב" 
                 />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label>שם איש קשר בכתובת</label>
+                  <input 
+                    className="form-input" 
+                    value={newAddress.contact_name} 
+                    onChange={e => setNewAddress(prev => ({...prev, contact_name: e.target.value}))} 
+                    placeholder="שם (אופציונלי)" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>טלפון איש קשר</label>
+                  <input 
+                    className="form-input" 
+                    value={newAddress.contact_phone} 
+                    onChange={e => setNewAddress(prev => ({...prev, contact_phone: e.target.value}))} 
+                    placeholder="טלפון (אופציונלי)"
+                    dir="ltr"
+                  />
+                </div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>

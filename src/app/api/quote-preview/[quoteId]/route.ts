@@ -51,7 +51,7 @@ export async function GET(
       if (oppData.contact_id) {
         const { data: c } = await supabase
           .from('contacts')
-          .select('first_name, last_name')
+          .select('name')
           .eq('id', oppData.contact_id)
           .single()
         contact = c

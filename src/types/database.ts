@@ -71,6 +71,8 @@ export type Database = {
           city: string
           zip_code: string | null
           notes: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
         }
         Insert: {
@@ -81,6 +83,8 @@ export type Database = {
           city: string
           zip_code?: string | null
           notes?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
         }
         Update: {
           organization_id?: string
@@ -89,6 +93,8 @@ export type Database = {
           city?: string
           zip_code?: string | null
           notes?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
         }
       }
       contacts: {
