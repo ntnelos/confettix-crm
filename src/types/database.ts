@@ -367,6 +367,9 @@ export type Database = {
           signed_at: string | null
           total_amount: number
           delivery_address_id: string | null
+          invoice_company_name: string | null
+          company_number: string | null
+          payment_method: string | null
           notes: string | null
           created_by: string | null
           created_at: string
@@ -382,6 +385,9 @@ export type Database = {
           signed_at?: string | null
           total_amount: number
           delivery_address_id?: string | null
+          invoice_company_name?: string | null
+          company_number?: string | null
+          payment_method?: string | null
           notes?: string | null
           created_by?: string | null
         }
@@ -391,6 +397,9 @@ export type Database = {
           signed_at?: string | null
           total_amount?: number
           delivery_address_id?: string | null
+          invoice_company_name?: string | null
+          company_number?: string | null
+          payment_method?: string | null
           notes?: string | null
           updated_at?: string
         }

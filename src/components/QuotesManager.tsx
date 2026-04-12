@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { useRouter } from 'next/navigation'
 
-type Quote = Database['public']['Tables']['quotes']['Row']
+import { useRouter } from 'next/navigation'
+
+type Quote = Database['public']['Tables']['quotes']['Row'] & { orders?: any[] }
 type QuoteItem = Database['public']['Tables']['quote_items']['Row']
 
 export default function QuotesManager({ opportunityId }: { opportunityId: string }) {
@@ -47,7 +49,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
   const fetchQuotes = async () => {
     setLoading(true)
     const { data: qData, error: qErr } = await (supabase.from('quotes') as any)
-      .select('*')
+      .select('*, orders(*)')
       .eq('opportunity_id', opportunityId)
       .order('created_at', { ascending: false })
       
@@ -321,6 +323,51 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     setIsDuplicating(false)
   }
 
+  const generateOrder = async (quoteId: string) => {
+    setIsDuplicating(true)
+    const sourceQuote = quotes.find(q => q.id === quoteId)
+    const sourceItems = itemsMap[quoteId] || []
+    if (!sourceQuote) { setIsDuplicating(false); return }
+
+    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
+      opportunity_id: opportunityId,
+      name: `הזמנה עבור ${sourceQuote.name.replace('העתק', '').trim()}`,
+      status: 'approved',
+      subtotal: sourceQuote.subtotal,
+      vat_rate: sourceQuote.vat_rate,
+      shipping_cost: sourceQuote.shipping_cost,
+      total_with_vat: sourceQuote.total_with_vat,
+      version: 1
+    }).select().single()
+
+    if (newQuote) {
+      for (const item of sourceItems) {
+        await (supabase.from('quote_items') as any).insert({
+          quote_id: newQuote.id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent,
+          line_total: item.line_total,
+          woo_product_id: item.woo_product_id,
+          woo_product_url: item.woo_product_url,
+          image_url: item.image_url,
+          sort_order: item.sort_order
+        })
+      }
+      
+      await (supabase.from('orders') as any).insert({
+         quote_id: newQuote.id,
+         opportunity_id: opportunityId,
+         total_amount: newQuote.total_with_vat,
+         status: 'pending_signature'
+      })
+
+      fetchQuotes()
+    }
+    setIsDuplicating(false)
+  }
+
   if (loading) return <div style={{ padding: 20 }}>טוען הצעות מחיר...</div>
 
   return (
@@ -340,14 +387,17 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
         <div style={{ display: 'flex', gap: 20, flexDirection: 'column' }}>
           {/* Quote Tabs Context */}
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
-            {quotes.map(q => (
+            {quotes.map(q => {
+              const isOrder = q.orders && q.orders.length > 0;
+              return (
               <div 
                 key={q.id} 
                 onClick={() => setActiveQuoteId(q.id)}
                 style={{ 
                   padding: '8px 16px', 
-                  background: activeQuoteId === q.id ? 'var(--pink)' : 'var(--surface-2)',
+                  background: activeQuoteId === q.id ? (isOrder ? '#4caf50' : 'var(--pink)') : 'var(--surface-2)',
                   color: activeQuoteId === q.id ? 'white' : 'var(--text-secondary)',
+                  border: (!isOrder && activeQuoteId !== q.id) ? 'none' : isOrder && activeQuoteId !== q.id ? '1px solid #4caf50' : 'none',
                   borderRadius: 20,
                   cursor: 'pointer',
                   fontSize: 13,
@@ -355,9 +405,9 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                   whiteSpace: 'nowrap'
                 }}
               >
-                {q.name}
+                {isOrder ? '✓ ' : ''}{q.name}
               </div>
-            ))}
+            )})}
           </div>
 
            {/* Active Quote Content */}
@@ -536,23 +586,55 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 20, gap: 16, flexWrap: 'wrap' }}>
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שכפול הצעה:</div>
-                        <button
-                          onClick={() => openDupModal(activeQuoteId)}
-                          style={{ padding: '8px 14px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
-                        >⊞ אפשרויות שכפול</button>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחה:</div>
-                        <button
-                          onClick={() => window.open(`/quotes/${activeQuoteId}/preview`, '_blank')}
-                          style={{ padding: '8px 16px', fontSize: 12, background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                          שלח הצעה
-                        </button>
-                      </div>
+                      {(() => {
+                         const isOrder = activeQuote?.orders && activeQuote.orders.length > 0;
+                         if (isOrder) {
+                           return (
+                             <div>
+                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
+                               <button
+                                 onClick={() => window.open(`/orders/${activeQuoteId}/checkout`, '_blank')}
+                                 style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                               >
+                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                 שלח לפתיחת הזמנה
+                               </button>
+                             </div>
+                           )
+                         }
+                         return (
+                           <>
+                             <div>
+                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שכפול הצעה:</div>
+                               <button
+                                 onClick={() => openDupModal(activeQuoteId)}
+                                 style={{ padding: '8px 14px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                               >⊞ אפשרויות שכפול</button>
+                             </div>
+                             <div>
+                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>הפקת הזמנה:</div>
+                               <button
+                                 onClick={() => generateOrder(activeQuoteId)} disabled={isDuplicating}
+                                 style={{ padding: '8px 16px', fontSize: 12, background: 'transparent', border: '1px solid #4caf50', color: '#4caf50', borderRadius: 6, cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', opacity: isDuplicating ? 0.7 : 1 }}
+                                 onMouseOver={e => { e.currentTarget.style.background='#4caf50'; e.currentTarget.style.color='white' }}
+                                 onMouseOut={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#4caf50' }}
+                               >
+                                 {isDuplicating ? 'מייצר...' : 'הפוך להזמנה ⚡'}
+                               </button>
+                             </div>
+                             <div>
+                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחה:</div>
+                               <button
+                                 onClick={() => window.open(`/quotes/${activeQuoteId}/preview`, '_blank')}
+                                 style={{ padding: '8px 16px', fontSize: 12, background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                               >
+                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                 שלח הצעה
+                               </button>
+                             </div>
+                           </>
+                         )
+                      })()}
                     </div>
 
                     {/* Totals */}

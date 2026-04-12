@@ -49,14 +49,14 @@ export default function OrganizationDetailsPage() {
   const id = params.id as string
   const router = useRouter()
   const supabase = createClient()
-  
+
   const [org, setOrg] = useState<Organization | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddressModal, setShowAddressModal] = useState(false)
   const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
-  
+
   const [showContactModal, setShowContactModal] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', email: '', mobile: '' })
 
@@ -68,7 +68,7 @@ export default function OrganizationDetailsPage() {
         .select('*')
         .eq('id', id)
         .single()
-      
+
       if (orgError || !orgData) {
         console.error("Org not found", orgError)
         router.push('/organizations')
@@ -81,7 +81,7 @@ export default function OrganizationDetailsPage() {
         .from('contacts')
         .select('*')
         .eq('organization_id', id)
-      
+
       if (contactsData) {
         setContacts(contactsData)
       }
@@ -91,7 +91,7 @@ export default function OrganizationDetailsPage() {
         .from('delivery_addresses')
         .select('*')
         .eq('organization_id', id)
-      
+
       if (addressesData) {
         setAddresses(addressesData as DeliveryAddress[])
       }
@@ -106,7 +106,7 @@ export default function OrganizationDetailsPage() {
     // DB Update
     const { error } = await (supabase.from('delivery_addresses') as any).update({ [field]: value }).eq('id', addrId)
     if (!error) {
-       setAddresses(prev => prev.map(a => a.id === addrId ? { ...a, [field]: value } : a))
+      setAddresses(prev => prev.map(a => a.id === addrId ? { ...a, [field]: value } : a))
     }
   }
 
@@ -124,7 +124,7 @@ export default function OrganizationDetailsPage() {
       contact_name: newAddress.contact_name || null,
       contact_phone: newAddress.contact_phone || null
     }).select().single()
-    
+
     if (data) {
       setAddresses(prev => [...prev, data])
       setShowAddressModal(false)
@@ -146,7 +146,7 @@ export default function OrganizationDetailsPage() {
       email: newContact.email || null,
       mobile: newContact.mobile || null
     }).select().single()
-    
+
     if (data) {
       setContacts(prev => [...prev, data])
       setShowContactModal(false)
@@ -207,10 +207,10 @@ export default function OrganizationDetailsPage() {
 
       <div className="page-body">
         {/* Header section with nice background */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, var(--pink) 0%, #aa0065 100%)', 
-          borderRadius: 'var(--radius)', 
-          padding: '40px 30px', 
+        <div style={{
+          background: 'linear-gradient(135deg, var(--pink) 0%, #aa0065 100%)',
+          borderRadius: 'var(--radius)',
+          padding: '40px 30px',
           color: 'white',
           marginBottom: 24,
           display: 'flex',
@@ -225,7 +225,7 @@ export default function OrganizationDetailsPage() {
               <span className="breadcrumb-sep">/</span>
               <span style={{ color: 'white' }}>{org.name}</span>
             </div>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 12 }}>
                 <BuildingIcon />
@@ -235,10 +235,10 @@ export default function OrganizationDetailsPage() {
                 <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 14, color: 'rgba(255,255,255,0.9)' }}>
                   {org.industry && <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BriefcaseIcon /> {org.industry}</span>}
                   {org.website && (
-                    <a 
-                      href={org.website.startsWith('http') ? org.website : `https://${org.website}`} 
-                      target="_blank" 
-                      rel="noreferrer" 
+                    <a
+                      href={org.website.startsWith('http') ? org.website : `https://${org.website}`}
+                      target="_blank"
+                      rel="noreferrer"
                       style={{ color: 'white', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 6 }}
                     >
                       <GlobeIcon /> {org.website.replace(/^https?:\/\//, '')}
@@ -248,33 +248,33 @@ export default function OrganizationDetailsPage() {
               </div>
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: 12 }}>
-            <Link 
+            <Link
               href="/organizations/new"
               className="btn btn-secondary"
               style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)', color: 'white' }}
             >
               <PlusIcon /> ארגון חדש
             </Link>
-            <Link 
+            <Link
               href={`/opportunities/new?organization_id=${org.id}`}
               className="btn btn-primary"
               style={{ background: 'white', color: 'var(--pink)' }}
             >
               <PlusIcon /> הזדמנות חדשה
             </Link>
-            <button 
-               onClick={handleDeleteOrg}
-               title="מחק ארגון"
-               style={{ 
-                 background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', 
-                 color: 'white', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', 
-                 display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, 
-                 transition: 'all 0.2s',
-               }}
-               onMouseOver={e => e.currentTarget.style.background='rgba(255,0,0,0.6)'}
-               onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.15)'}
+            <button
+              onClick={handleDeleteOrg}
+              title="מחק ארגון"
+              style={{
+                background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white', padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,0,0,0.6)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
             >
               מחק ארגון
             </button>
@@ -282,17 +282,17 @@ export default function OrganizationDetailsPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 24, alignItems: 'start' }}>
-          
+
           {/* מרווח מרכזי - אנשי קשר ועוד */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            
+
             <div className="card">
               <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <UsersIcon /> אנשי קשר ({contacts.length})
                 </h2>
                 <button onClick={() => setShowContactModal(true)} className="btn btn-sm btn-primary">
-                   <PlusIcon /> הוסף
+                  <PlusIcon /> הוסף
                 </button>
               </div>
 
@@ -318,7 +318,7 @@ export default function OrganizationDetailsPage() {
                           </Link>
                         </td>
                         <td style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
-                           {c.email || '—'}
+                          {c.email || '—'}
                         </td>
                         <td style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-light)', color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>
                           {c.mobile || c.phone || '—'}
@@ -335,11 +335,11 @@ export default function OrganizationDetailsPage() {
                 <h2 style={{ fontSize: 16, fontWeight: 600 }}>היסטוריה והערות</h2>
               </div>
               <div style={{ padding: '20px 0' }}>
-                 {/* Communication history will go here */}
-                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
-                    <div style={{ fontSize: 40, opacity: 0.2, marginBottom: 10 }}>📝</div>
-                    טרם נשמרו הערות בפרופיל הארגון.
-                 </div>
+                {/* Communication history will go here */}
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
+                  <div style={{ fontSize: 40, opacity: 0.2, marginBottom: 10 }}>📝</div>
+                  טרם נשמרו הערות בפרופיל הארגון.
+                </div>
               </div>
             </div>
 
@@ -366,7 +366,7 @@ export default function OrganizationDetailsPage() {
                   placeholder="לדוגמה: תעשייה אווירית בע״מ"
                   onSave={(val) => updateOrgField('invoice_company_name', val)}
                 />
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <InlineEditableField
                     label="תעשייה"
@@ -438,49 +438,49 @@ export default function OrganizationDetailsPage() {
               </div>
               <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {addresses.length === 0 ? (
-                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
-                     טרם הוגדרה כתובת אספקה לארגון.
-                   </div>
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>
+                    טרם הוגדרה כתובת אספקה לארגון.
+                  </div>
                 ) : addresses.map((addr) => (
-                   <div key={addr.id} style={{ background: 'var(--surface-2)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-                     <div style={{ marginBottom: 12 }}>
-                        <InlineEditableField
-                          label="תווית הכתובת (למשל: סניף מרכזי)"
-                          value={addr.label}
-                          placeholder="תווית"
-                          onSave={(val) => updateDeliveryAddress(addr.id, 'label', val)}
-                        />
-                     </div>
-                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-                       <InlineEditableField
-                          label="רחוב ומספר"
-                          value={addr.street}
-                          placeholder="רחוב"
-                          onSave={(val) => updateDeliveryAddress(addr.id, 'street', val)}
-                       />
-                       <InlineEditableField
-                          label="עיר"
-                          value={addr.city}
-                          placeholder="עיר"
-                          onSave={(val) => updateDeliveryAddress(addr.id, 'city', val)}
-                       />
-                     </div>
-                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                       <InlineEditableField
-                          label="שם איש קשר בכתובת"
-                          value={addr.contact_name}
-                          placeholder="למשל: דגנית"
-                          onSave={(val) => updateDeliveryAddress(addr.id, 'contact_name', val)}
-                       />
-                       <InlineEditableField
-                          label="טלפון איש קשר"
-                          value={addr.contact_phone}
-                          placeholder="למשל: 050-1234567"
-                          dir="ltr"
-                          onSave={(val) => updateDeliveryAddress(addr.id, 'contact_phone', val)}
-                       />
-                     </div>
-                   </div>
+                  <div key={addr.id} style={{ background: 'var(--surface-2)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div style={{ marginBottom: 12 }}>
+                      <InlineEditableField
+                        label="תווית הכתובת (למשל: סניף מרכזי)"
+                        value={addr.label}
+                        placeholder="תווית"
+                        onSave={(val) => updateDeliveryAddress(addr.id, 'label', val)}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+                      <InlineEditableField
+                        label="רחוב ומספר"
+                        value={addr.street}
+                        placeholder="רחוב"
+                        onSave={(val) => updateDeliveryAddress(addr.id, 'street', val)}
+                      />
+                      <InlineEditableField
+                        label="עיר"
+                        value={addr.city}
+                        placeholder="עיר"
+                        onSave={(val) => updateDeliveryAddress(addr.id, 'city', val)}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <InlineEditableField
+                        label="שם איש קשר"
+                        value={addr.contact_name}
+                        placeholder="למשל: דגנית"
+                        onSave={(val) => updateDeliveryAddress(addr.id, 'contact_name', val)}
+                      />
+                      <InlineEditableField
+                        label="טלפון איש קשר"
+                        value={addr.contact_phone}
+                        placeholder="למשל: 050-1234567"
+                        dir="ltr"
+                        onSave={(val) => updateDeliveryAddress(addr.id, 'contact_phone', val)}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -497,47 +497,47 @@ export default function OrganizationDetailsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="form-group">
                 <label>תווית הכתובת (אופציונלי)</label>
-                <input 
-                  className="form-input" 
-                  value={newAddress.label} 
-                  onChange={e => setNewAddress(prev => ({...prev, label: e.target.value}))} 
-                  placeholder="למשל: סניף מרכזי, מחסן לוגיסטי" 
+                <input
+                  className="form-input"
+                  value={newAddress.label}
+                  onChange={e => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder="למשל: סניף מרכזי, מחסן לוגיסטי"
                 />
               </div>
               <div className="form-group">
                 <label>רחוב ומספר <span style={{ color: 'var(--pink)' }}>*</span></label>
-                <input 
-                  className="form-input" 
-                  value={newAddress.street} 
-                  onChange={e => setNewAddress(prev => ({...prev, street: e.target.value}))} 
-                  placeholder="לדוגמה: הברזל 24" 
+                <input
+                  className="form-input"
+                  value={newAddress.street}
+                  onChange={e => setNewAddress(prev => ({ ...prev, street: e.target.value }))}
+                  placeholder="לדוגמה: הברזל 24"
                 />
               </div>
               <div className="form-group">
                 <label>עיר <span style={{ color: 'var(--pink)' }}>*</span></label>
-                <input 
-                  className="form-input" 
-                  value={newAddress.city} 
-                  onChange={e => setNewAddress(prev => ({...prev, city: e.target.value}))} 
-                  placeholder="לדוגמה: תל אביב" 
+                <input
+                  className="form-input"
+                  value={newAddress.city}
+                  onChange={e => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="לדוגמה: תל אביב"
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
                   <label>שם איש קשר בכתובת</label>
-                  <input 
-                    className="form-input" 
-                    value={newAddress.contact_name} 
-                    onChange={e => setNewAddress(prev => ({...prev, contact_name: e.target.value}))} 
-                    placeholder="שם (אופציונלי)" 
+                  <input
+                    className="form-input"
+                    value={newAddress.contact_name}
+                    onChange={e => setNewAddress(prev => ({ ...prev, contact_name: e.target.value }))}
+                    placeholder="שם (אופציונלי)"
                   />
                 </div>
                 <div className="form-group">
                   <label>טלפון איש קשר</label>
-                  <input 
-                    className="form-input" 
-                    value={newAddress.contact_phone} 
-                    onChange={e => setNewAddress(prev => ({...prev, contact_phone: e.target.value}))} 
+                  <input
+                    className="form-input"
+                    value={newAddress.contact_phone}
+                    onChange={e => setNewAddress(prev => ({ ...prev, contact_phone: e.target.value }))}
                     placeholder="טלפון (אופציונלי)"
                     dir="ltr"
                   />
@@ -559,32 +559,32 @@ export default function OrganizationDetailsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="form-group">
                 <label>שם מלא <span style={{ color: 'var(--pink)' }}>*</span></label>
-                <input 
-                  className="form-input" 
-                  value={newContact.name} 
-                  onChange={e => setNewContact(prev => ({...prev, name: e.target.value}))} 
-                  placeholder="למשל: דגנית כהן" 
+                <input
+                  className="form-input"
+                  value={newContact.name}
+                  onChange={e => setNewContact(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="למשל: דגנית כהן"
                 />
               </div>
               <div className="form-group">
                 <label>דוא״ל</label>
-                <input 
-                  className="form-input" 
+                <input
+                  className="form-input"
                   type="email"
-                  value={newContact.email} 
-                  onChange={e => setNewContact(prev => ({...prev, email: e.target.value}))} 
-                  placeholder="name@company.com" 
+                  value={newContact.email}
+                  onChange={e => setNewContact(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="name@company.com"
                   dir="ltr"
                 />
               </div>
               <div className="form-group">
                 <label>טלפון נייד</label>
-                <input 
-                  className="form-input" 
+                <input
+                  className="form-input"
                   type="tel"
-                  value={newContact.mobile} 
-                  onChange={e => setNewContact(prev => ({...prev, mobile: e.target.value}))} 
-                  placeholder="05X-XXXXXXX" 
+                  value={newContact.mobile}
+                  onChange={e => setNewContact(prev => ({ ...prev, mobile: e.target.value }))}
+                  placeholder="05X-XXXXXXX"
                   dir="ltr"
                 />
               </div>
@@ -600,21 +600,21 @@ export default function OrganizationDetailsPage() {
   )
 }
 
-function InlineEditableField({ 
-  label, 
-  value, 
-  onSave, 
+function InlineEditableField({
+  label,
+  value,
+  onSave,
   type = 'text',
   options = [],
   placeholder = '',
   dir = 'rtl',
   icon
-}: { 
-  label: string, 
-  value: string | number | null | undefined, 
+}: {
+  label: string,
+  value: string | number | null | undefined,
   onSave: (val: string) => void,
   type?: string,
-  options?: {value: string, label: string}[],
+  options?: { value: string, label: string }[],
   placeholder?: string,
   dir?: string,
   icon?: React.ReactNode
@@ -638,16 +638,16 @@ function InlineEditableField({
       <div style={{ flex: 1 }}>
         <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 500 }}>{label}</label>
         {type === 'textarea' ? (
-          <textarea 
+          <textarea
             className="form-textarea"
             value={currentValue}
             onChange={(e) => setCurrentValue(e.target.value)}
             onBlur={handleBlur}
             placeholder={placeholder}
-            style={{ 
-              width: '100%', 
-              fontSize: 13, 
-              padding: '8px 10px', 
+            style={{
+              width: '100%',
+              fontSize: 13,
+              padding: '8px 10px',
               direction: dir as any,
               border: currentValue ? '1px solid var(--border)' : '1px dashed var(--border-strong)',
               transition: 'border-color 0.2s',
@@ -663,10 +663,10 @@ function InlineEditableField({
               setCurrentValue(e.target.value)
               onSave(e.target.value)
             }}
-            style={{ 
-              width: '100%', 
-              fontSize: 13, 
-              padding: '8px 10px', 
+            style={{
+              width: '100%',
+              fontSize: 13,
+              padding: '8px 10px',
               direction: dir as any,
               border: currentValue ? '1px solid var(--border)' : '1px dashed var(--border-strong)',
               transition: 'border-color 0.2s',
@@ -679,17 +679,17 @@ function InlineEditableField({
           </select>
         ) : (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input 
+            <input
               type={type}
               className="form-input"
               value={currentValue}
               onChange={(e) => setCurrentValue(e.target.value)}
               onBlur={handleBlur}
               placeholder={placeholder}
-              style={{ 
+              style={{
                 flex: 1,
-                fontSize: 13, 
-                padding: '8px 10px', 
+                fontSize: 13,
+                padding: '8px 10px',
                 direction: dir as any,
                 border: currentValue ? '1px solid var(--border)' : '1px dashed var(--border-strong)',
                 transition: 'border-color 0.2s',
@@ -697,9 +697,9 @@ function InlineEditableField({
               }}
             />
             {type === 'url' && currentValue && (
-              <a 
-                href={currentValue.startsWith('http') ? currentValue : `https://${currentValue}`} 
-                target="_blank" 
+              <a
+                href={currentValue.startsWith('http') ? currentValue : `https://${currentValue}`}
+                target="_blank"
                 rel="noopener noreferrer"
                 title="פתח קישור בכרטיסייה חדשה"
                 style={{
