@@ -78,7 +78,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
         name: `הצעת מחיר ${new Date().toLocaleDateString('he-IL')}`,
         status: 'draft',
         subtotal: 0,
-        vat_rate: 17,
+        vat_rate: 18,
         shipping_cost: 0,
         total_with_vat: 0,
         version: 1
@@ -217,6 +217,12 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
      recalculateQuote(updatedQuote, items)
   }
 
+  const updateQuoteName = async (quoteId: string, newName: string) => {
+    if (!newName.trim()) return
+    await (supabase.from('quotes') as any).update({ name: newName.trim() }).eq('id', quoteId)
+    setQuotes(quotes.map(q => q.id === quoteId ? { ...q, name: newName.trim() } : q))
+  }
+
   // ---- Duplication functions ----
   const openDupModal = async (quoteId: string) => {
     setDupSourceQuoteId(quoteId)
@@ -347,9 +353,26 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
             ))}
           </div>
 
-          {/* Active Quote Content */}
-          {activeQuoteId && (
+           {/* Active Quote Content */}
+          {activeQuoteId && (() => {
+            const activeQuote = quotes.find(q => q.id === activeQuoteId)
+            return (
             <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+               {/* Editable Quote Name Header */}
+               <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg, #0b1536, #1a1b41)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>שם הצעה:</span>
+                 <input
+                   key={activeQuoteId}
+                   defaultValue={activeQuote?.name || ''}
+                   onBlur={e => updateQuoteName(activeQuoteId, e.target.value)}
+                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                   style={{
+                     background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.3)',
+                     color: 'white', fontSize: 15, fontWeight: 600, outline: 'none',
+                     flex: 1, padding: '2px 4px'
+                   }}
+                 />
+               </div>
                <div style={{ padding: '24px 20px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                   
                   {/* Smart Search Bar & Buttons */}
@@ -520,7 +543,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                           </div>
                        </div>
                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-                          <span>מע״מ (17%):</span>
+                          <span>מע״מ (18%):</span>
                           <span>כלול בחישוב המלא</span>
                        </div>
                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '2px solid var(--border)', fontWeight: 700, fontSize: 16, color: 'var(--pink)' }}>
@@ -529,11 +552,12 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                        </div>
                     </div>
                   </div>
-                </div>
-             </div>
-           )}
-         </div>
-       )}
+                 </div>
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {/* Duplication Modal */}
       {showDupModal && (

@@ -180,12 +180,23 @@ export default function OpportunityDetailsPage() {
             </div>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
              {/* Huge Value Display */}
              <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>שווי עסקה</div>
                 <div style={{ fontSize: 32, fontWeight: 800 }}>{formattedValue}</div>
              </div>
+             <Link
+               href="/opportunities/new"
+               style={{
+                 background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+                 color: 'white', padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+                 display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
+                 textDecoration: 'none', justifyContent: 'center', width: '100%'
+               }}
+             >
+               + הזדמנות חדשה
+             </Link>
              <button 
                onClick={handleDeleteOpp}
                title="מחק הזדמנות"
@@ -313,7 +324,7 @@ export default function OpportunityDetailsPage() {
                         <option value="meeting">🤝 פגישה פרונטלית</option>
                      </select>
                      <button type="submit" className="btn btn-primary" disabled={isSubmittingUpdate} style={{ marginRight: 'auto' }}>
-                        {isSubmittingUpdate ? 'שומר...' : '+ הוסף תיעוד'}
+                        {isSubmittingUpdate ? 'שומר...' : 'שמור'}
                      </button>
                    </div>
                 </form>
