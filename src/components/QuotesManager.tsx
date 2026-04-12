@@ -336,48 +336,33 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     setIsDuplicating(false)
   }
 
-  const generateOrder = async (quoteId: string) => {
+  const generateOrderAndRedirect = async (quoteId: string) => {
     setIsDuplicating(true)
     const sourceQuote = quotes.find(q => q.id === quoteId)
-    const sourceItems = itemsMap[quoteId] || []
     if (!sourceQuote) { setIsDuplicating(false); return }
 
-    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
-      opportunity_id: opportunityId,
-      name: `הזמנה עבור ${sourceQuote.name.replace('העתק', '').trim()}`,
-      status: 'approved',
-      subtotal: sourceQuote.subtotal,
-      vat_rate: sourceQuote.vat_rate,
-      shipping_cost: sourceQuote.shipping_cost,
-      total_with_vat: sourceQuote.total_with_vat,
-      version: 1
-    }).select().single()
+    // Check if an order already exists for this quote
+    const isOrder = sourceQuote.orders && sourceQuote.orders.length > 0;
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (newQuote) {
-      for (const item of sourceItems) {
-        await (supabase.from('quote_items') as any).insert({
-          quote_id: newQuote.id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount_percent: item.discount_percent,
-          line_total: item.line_total,
-          woo_product_id: item.woo_product_id,
-          woo_product_url: item.woo_product_url,
-          image_url: item.image_url,
-          sort_order: item.sort_order
-        })
-      }
-
-      await (supabase.from('orders') as any).insert({
-        quote_id: newQuote.id,
-        opportunity_id: opportunityId,
-        total_amount: newQuote.total_with_vat,
-        status: 'pending_signature'
+    if (!isOrder) {
+      const { error } = await (supabase.from('orders') as any).insert({
+         quote_id: quoteId,
+         opportunity_id: opportunityId,
+         total_amount: sourceQuote.total_with_vat || 0,
+         status: 'pending_signature',
+         ...(user?.id && { created_by: user.id })
       })
-
-      fetchQuotes()
+      if (error) {
+         console.error('Order insert error:', error)
+         alert('שגיאה ביצירת מסגרת הזמנה: ' + error.message)
+         setIsDuplicating(false)
+         return
+      }
+      await fetchQuotes()
     }
+    
+    window.open(`/orders/${quoteId}/checkout`, '_blank')
     setIsDuplicating(false)
   }
 
