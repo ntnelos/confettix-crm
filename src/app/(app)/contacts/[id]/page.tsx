@@ -90,10 +90,10 @@ export default function ContactDetailsPage() {
         
         // Fetch Invoices efficiently via Order IDs
         if (opps.length > 0) {
-          const oppIds = opps.map(o => o.id)
+          const oppIds = (opps as any[]).map(o => o.id)
           const { data: contactOrders } = await supabase.from('orders').select('id').in('opportunity_id', oppIds)
           if (contactOrders && contactOrders.length > 0) {
-             const orderIds = contactOrders.map(o => o.id)
+             const orderIds = (contactOrders as any[]).map(o => o.id)
              const { data: contactInvoices } = await supabase.from('invoices').select('*').in('order_id', orderIds).order('issued_at', { ascending: false })
              setInvoices(contactInvoices || [])
           }
