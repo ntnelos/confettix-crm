@@ -87,11 +87,12 @@ export default function OpportunityDetailsPage() {
       
       if (orderData) {
         setSignedOrder(orderData)
-        if (orderData.invoices && orderData.invoices.length > 0) {
-          setInvoice(orderData.invoices[0])
+        const typedOrder = orderData as any
+        if (typedOrder.invoices && typedOrder.invoices.length > 0) {
+          setInvoice(typedOrder.invoices[0])
         }
-        if (orderData.delivery_address_id) {
-          const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', orderData.delivery_address_id).single()
+        if (typedOrder.delivery_address_id) {
+          const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', typedOrder.delivery_address_id).single()
           if (addr) setDeliveryAddress(addr)
         }
       }
