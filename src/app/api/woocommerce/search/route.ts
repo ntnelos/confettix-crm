@@ -58,7 +58,9 @@ export async function GET(request: Request) {
       regular_price: parseFloat(item.regular_price || '0'),
       sku: item.sku || '',
       permalink: item.permalink,
-      image_url: item.images && item.images.length > 0 ? item.images[0].src : null
+      image_url: item.images && item.images.length > 0 ? item.images[0].src : null,
+      short_description: item.short_description || '',
+      description: item.description || ''
     }))
 
     return NextResponse.json({ products })

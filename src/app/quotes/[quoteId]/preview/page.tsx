@@ -60,15 +60,21 @@ export default function QuotePreviewPage() {
 
       // 3. Opportunity + Contact (join) + Org
       if (qData.opportunity_id) {
-        const { data: oppData, error: oppErr } = await (supabase.from('opportunities') as any)
-          .select('subject, contact_id, organization_id, contacts(first_name, last_name), organizations(name)')
-          .eq('id', qData.opportunity_id).single()
+        // Use explicit FK hints for the joins
+        const { data: oppData } = await (supabase.from('opportunities') as any)
+          .select('subject, contact_id, organization_id, contacts!contact_id(first_name, last_name), organizations!organization_id(name)')
+          .eq('id', qData.opportunity_id)
+          .single()
 
         if (oppData) {
           setOpp({ subject: oppData.subject, contact_id: oppData.contact_id, organization_id: oppData.organization_id })
-          // contacts and organizations come as joined objects
-          if (oppData.contacts) setContact(oppData.contacts)
-          if (oppData.organizations) setOrg(oppData.organizations)
+          
+          // Supabase join returns nested object - handle both array and object cases
+          const contactData = Array.isArray(oppData.contacts) ? oppData.contacts[0] : oppData.contacts
+          const orgData = Array.isArray(oppData.organizations) ? oppData.organizations[0] : oppData.organizations
+          
+          if (contactData?.first_name) setContact(contactData)
+          if (orgData?.name) setOrg(orgData)
         }
       }
       setLoading(false)
