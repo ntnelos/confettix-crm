@@ -16,6 +16,7 @@ const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 interface Organization {
   id: string
   name: string
+  invoice_company_name: string | null
   industry: string | null
   employee_count: number | null
   website: string | null
