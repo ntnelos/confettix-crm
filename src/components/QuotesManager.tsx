@@ -417,23 +417,40 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                          {(itemsMap[activeQuoteId] || []).map(item => (
                             <tr key={item.id}>
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ color: 'var(--pink)', opacity: 0.65, flexShrink: 0 }}>
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
-                                      <line x1="12" y1="22" x2="12" y2="7"/>
-                                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
-                                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
-                                    </svg>
-                                  </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {/* Thumbnail: image if WC product, gift icon if manual */}
+                                  {item.image_url ? (
+                                    <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה במוצר באתר" style={{ flexShrink: 0 }}>
+                                      <img
+                                        src={item.image_url}
+                                        alt={item.product_name}
+                                        width={36}
+                                        height={36}
+                                        style={{ borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)', display: 'block' }}
+                                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                                      />
+                                    </a>
+                                  ) : (
+                                    <span style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', borderRadius: 6, border: '1px dashed var(--border)', flexShrink: 0, color: 'var(--text-muted)' }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
+                                        <line x1="12" y1="22" x2="12" y2="7"/>
+                                        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+                                        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+                                      </svg>
+                                    </span>
+                                  )}
                                   <input
                                     value={item.product_name}
                                     onChange={e => updateItem(activeQuoteId, item.id, 'product_name', e.target.value)}
-                                    style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500 }}
+                                    style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500, fontSize: 13 }}
                                   />
                                 </div>
-                                {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 19 }}>🔗 צפה</a>}
+                                {item.woo_product_url && (
+                                  <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 44, display: 'block', marginTop: 2 }}>🔗 צפה באתר</a>
+                                )}
                               </td>
+
 
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
                                 <input 
