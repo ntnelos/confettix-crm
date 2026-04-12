@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import SignaturePad from '@/components/SignaturePad'
 
@@ -15,7 +15,10 @@ interface OrderData {
 
 export default function OrderCheckoutPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const quoteId = params.quoteId as string
+  const viewMode = searchParams.get('mode')
+  const isReadOnly = viewMode === 'readOnly'
 
   const [data, setData] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -75,6 +78,11 @@ export default function OrderCheckoutPage() {
           setContactName(json.contact.name || '')
           setContactPhone(json.contact.phone || '')
           setContactEmail(json.contact.email || '')
+        }
+
+        // If order is signed and has signature, pre-fill it for preview
+        if (json.order?.signature_data) {
+          setSignature(json.order.signature_data)
         }
 
       } catch (err: any) {
@@ -158,7 +166,15 @@ export default function OrderCheckoutPage() {
   return (
     <>
       {/* ----------------- PRINT ONLY LAYOUT ----------------- */}
-      <div className="print-only-layout" style={{ display: 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: 40, direction: 'rtl' }}>
+      <div className="print-only-layout" style={{ display: isReadOnly ? 'block' : 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: isReadOnly ? '40px 20px' : 40, direction: 'rtl', margin: isReadOnly ? '0 auto' : '0', maxWidth: isReadOnly ? 800 : 'none', boxShadow: isReadOnly ? '0 0 40px rgba(0,0,0,0.1)' : 'none', minHeight: isReadOnly ? '100vh' : 'auto' }}>
+        {isReadOnly && (
+          <div className="no-print" style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 20px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>תצוגת מסמך (PDF)</span>
+            <button onClick={() => window.print()} style={{ padding: '6px 12px', background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}>
+               🖨️ הדפס / שמור כ-PDF
+            </button>
+          </div>
+        )}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 40 }} />
         </div>
@@ -289,7 +305,8 @@ export default function OrderCheckoutPage() {
       </div>
       {/* ----------------- END PRINT ONLY LAYOUT ----------------- */}
 
-      <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
+      {!isReadOnly && (
+        <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
         <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
 
           {/* Left Side: Forms */}
@@ -516,6 +533,12 @@ export default function OrderCheckoutPage() {
           }
           .print-only-layout { 
             display: block !important; 
+            box-shadow: none !important;
+            padding: 0 !important;
+            max-width: none !important;
+          }
+          .no-print {
+            display: none !important;
           }
           @page {
             margin: 1.5cm;
@@ -523,6 +546,7 @@ export default function OrderCheckoutPage() {
         }
       `}} />
       </div>
+      )}
     </>
   )
 }

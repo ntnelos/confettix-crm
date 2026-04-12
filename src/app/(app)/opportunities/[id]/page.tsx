@@ -467,7 +467,7 @@ export default function OpportunityDetailsPage() {
                      {new Date(signedOrder.signed_at || signedOrder.updated_at).toLocaleString('he-IL')}
                    </div>
                    
-                   <a target="_blank" href={`/orders/${signedOrder.quote_id}/checkout`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#16a34a', color: 'white', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
+                   <a target="_blank" href={`/orders/${signedOrder.quote_id}/checkout?mode=readOnly`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#16a34a', color: 'white', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
                      👁️ צפו בהזמנה החתומה (PDF)
                    </a>
                 </div>

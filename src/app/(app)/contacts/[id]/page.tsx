@@ -256,13 +256,6 @@ export default function ContactDetailsPage() {
             >
               <PlusIcon /> איש קשר חדש
             </Link>
-            <Link 
-              href={`/opportunities/new?contact_id=${contact.id}${contact.organization_id ? `&organization_id=${contact.organization_id}` : ''}`}
-              className="btn btn-primary"
-              style={{ background: 'white', color: 'var(--pink)' }}
-            >
-              <PlusIcon /> הזדמנות חדשה
-            </Link>
             <button 
                onClick={handleDeleteContact}
                title="מחק איש קשר"
@@ -370,8 +363,13 @@ export default function ContactDetailsPage() {
             {/* Opportunities Card */}
             <div className="card">
               <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontSize: 16, fontWeight: 600 }}>הזדמנויות מקושרות</h2>
-                <span style={{ fontSize: 13, background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 12 }}>{opportunities.length}</span>
+                <h2 style={{ fontSize: 16, fontWeight: 600 }}>הזדמנויות מקושרות ({opportunities.length})</h2>
+                <Link 
+                  href={`/opportunities/new?contact_id=${contact.id}${contact.organization_id ? `&organization_id=${contact.organization_id}` : ''}`}
+                  className="btn btn-sm btn-primary"
+                >
+                  <PlusIcon /> הזדמנות חדשה
+                </Link>
               </div>
               <div style={{ padding: 20 }}>
                 {opportunities.length === 0 ? (
@@ -379,14 +377,14 @@ export default function ContactDetailsPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {opportunities.map(opp => (
-                      <Link key={opp.id} href={`/opportunities/${opp.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, border: '1px solid var(--border-light)', borderRadius: 12, textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'var(--surface)' }} onMouseOver={e => e.currentTarget.style.borderColor='var(--border-strong)'} onMouseOut={e => e.currentTarget.style.borderColor='var(--border-light)'}>
+                      <Link key={opp.id} href={`/opportunities/${opp.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', border: '1px solid var(--border)', borderRadius: 12, textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'var(--surface-2)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} onMouseOver={e => { e.currentTarget.style.borderColor='var(--pink)'; e.currentTarget.style.background='var(--surface)'; }} onMouseOut={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--surface-2)'; }}>
                         <div>
-                           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{opp.subject}</div>
+                           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--text-primary)' }}>{opp.subject}</div>
                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>נוצר ב: {new Date(opp.created_at).toLocaleDateString('he-IL')}</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                           <div style={{ fontWeight: 700, fontSize: 14 }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
-                           <div style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, fontWeight: 600, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'var(--surface-2)', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)' }}>
+                           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
+                           <div style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'white', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)', border: '1px solid ' + (opp.status === 'won' ? '#86efac' : opp.status === 'lost' ? '#fecaca' : 'var(--border)') }}>
                              {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'בטיפול' : opp.status === 'won' ? 'זכייה' : 'בוטל'}
                            </div>
                         </div>
