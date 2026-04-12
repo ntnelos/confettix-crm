@@ -345,12 +345,18 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     const isOrder = sourceQuote.orders && sourceQuote.orders.length > 0;
 
     if (!isOrder) {
-      await (supabase.from('orders') as any).insert({
+      const { error } = await (supabase.from('orders') as any).insert({
          quote_id: quoteId,
          opportunity_id: opportunityId,
-         total_amount: sourceQuote.total_with_vat,
+         total_amount: sourceQuote.total_with_vat || 0,
          status: 'pending_signature'
       })
+      if (error) {
+         console.error('Order insert error:', error)
+         alert('שגיאה ביצירת מסגרת הזמנה: ' + error.message)
+         setIsDuplicating(false)
+         return
+      }
       await fetchQuotes()
     }
     

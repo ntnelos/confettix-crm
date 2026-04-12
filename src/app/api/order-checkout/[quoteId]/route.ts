@@ -23,7 +23,8 @@ export async function GET(
     .single()
 
   if (!order) {
-    return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    console.error('Order fetch error:', orderErr)
+    return NextResponse.json({ error: `Order not found: ${orderErr?.message || 'No specific error'}` }, { status: 404 })
   }
 
   // 2. Fetch the Quote + items
