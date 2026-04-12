@@ -35,8 +35,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
 
   const fetchQuotes = async () => {
     setLoading(true)
-    const { data: qData, error: qErr } = await supabase
-      .from('quotes')
+    const { data: qData, error: qErr } = await (supabase.from('quotes') as any)
       .select('*')
       .eq('opportunity_id', opportunityId)
       .order('created_at', { ascending: false })
@@ -47,10 +46,9 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
         setActiveQuoteId(qData[0].id)
       }
       // Fetch items for all quotes
-      const { data: iData } = await supabase
-        .from('quote_items')
+      const { data: iData } = await (supabase.from('quote_items') as any)
         .select('*')
-        .in('quote_id', qData.map(q => q.id))
+        .in('quote_id', qData.map((q: any) => q.id))
         .order('sort_order', { ascending: true })
         
       if (iData) {
@@ -66,8 +64,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
   }
 
   const createQuote = async () => {
-    const { data, error } = await supabase
-      .from('quotes')
+    const { data, error } = await (supabase.from('quotes') as any)
       .insert({
         opportunity_id: opportunityId,
         name: `הצעת מחיר ${new Date().toLocaleDateString('he-IL')}`,
@@ -120,8 +117,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     let image_url = wcProduct ? wcProduct.image_url : null
     let quantity = 1
     
-    const { data, error } = await supabase
-      .from('quote_items')
+    const { data, error } = await (supabase.from('quote_items') as any)
       .insert({
         quote_id: quoteId,
         product_name,
@@ -170,14 +166,14 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     // Save to DB
     const itemToSave = updatedItems.find(i => i.id === itemId)
     if (itemToSave) {
-      await supabase.from('quote_items').update(itemToSave).eq('id', itemId)
+      await (supabase.from('quote_items') as any).update(itemToSave).eq('id', itemId)
       const quote = quotes.find(q => q.id === quoteId)
       if (quote) recalculateQuote(quote, updatedItems)
     }
   }
   
   const deleteItem = async (quoteId: string, itemId: string) => {
-     await supabase.from('quote_items').delete().eq('id', itemId)
+     await (supabase.from('quote_items') as any).delete().eq('id', itemId)
      const items = itemsMap[quoteId] || []
      const updatedItems = items.filter(i => i.id !== itemId)
      setItemsMap({ ...itemsMap, [quoteId]: updatedItems })
@@ -192,7 +188,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     const totalWithoutVat = subtotal + shipping
     const totalWithVat = totalWithoutVat * (1 + (quote.vat_rate / 100))
     
-    const { data } = await supabase.from('quotes').update({
+    const { data } = await (supabase.from('quotes') as any).update({
        subtotal,
        total_with_vat: totalWithVat
     }).eq('id', quote.id).select().single()
