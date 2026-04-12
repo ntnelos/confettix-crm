@@ -10,6 +10,7 @@ interface OrderData {
   items: any[]
   org: any
   addresses: any[]
+  opp_subject?: string
 }
 
 export default function OrderCheckoutPage() {
@@ -30,7 +31,7 @@ export default function OrderCheckoutPage() {
   // Address State
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
   const [newAddress, setNewAddress] = useState({ label: '', street: '', city: '', contact_name: '', contact_phone: '' })
-  
+
   // Contact details
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
@@ -71,9 +72,9 @@ export default function OrderCheckoutPage() {
         }
 
         if (json.contact) {
-            setContactName(json.contact.full_name || '')
-            setContactPhone(json.contact.phone || '')
-            setContactEmail(json.contact.email || '')
+          setContactName(json.contact.name || '')
+          setContactPhone(json.contact.phone || '')
+          setContactEmail(json.contact.email || '')
         }
 
       } catch (err: any) {
@@ -159,19 +160,19 @@ export default function OrderCheckoutPage() {
       {/* ----------------- PRINT ONLY LAYOUT ----------------- */}
       <div className="print-only-layout" style={{ display: 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: 40, direction: 'rtl' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 100 }} />
+          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 40 }} />
         </div>
-        
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>
-            {new Date(quote?.created_at || new Date()).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} {new Date(quote?.created_at || new Date()).toLocaleDateString('he-IL')}
-          </div>
           <div style={{ fontWeight: 800, fontSize: 16 }}>
             לכבוד: {org?.name || 'לקוח מזדמן'} {contactName ? `- ${contactName}` : ''}
           </div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>
+            {new Date(quote?.created_at || new Date()).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} {new Date(quote?.created_at || new Date()).toLocaleDateString('he-IL')}
+          </div>
         </div>
 
-        <h1 style={{ fontSize: 24, fontWeight: 900, textAlign: 'right', marginBottom: 30 }}>הצעת מחיר {quote?.quote_number || quoteId.substring(0, 4)}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 900, textAlign: 'right', marginBottom: 30 }}>הזמנה מס' {quote?.quote_number || quoteId.substring(0, 4)}</h1>
 
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 20, fontSize: 14 }}>
           <thead>
@@ -217,49 +218,64 @@ export default function OrderCheckoutPage() {
           </tbody>
         </table>
 
-        <div style={{ marginTop: 50 }}>
+        <div style={{ marginBottom: 40, marginTop: 20, fontSize: 13, lineHeight: 1.6, fontWeight: 700, paddingRight: 20 }}>
+          <ul style={{ listStyleType: 'disc' }}>
+             <li>התאמת עיצוב מעיצובים קיימים, תוספת מיתוג של שם אישי, הקדשה ולוגו ללא תוספת תשלום.</li>
+             <li>עיצוב חדש בהתאמה - 500 ש"ח</li>
+             <li>אני מאשר/ת קבלת דיוורים מקונפטיקס</li>
+          </ul>
+          <div style={{ marginTop: 8 }}>
+             תשלום בהעברה בנקאית עם אישור הצעת המחיר
+          </div>
+        </div>
+
+        <div style={{ marginTop: 30 }}>
           <div style={{ background: '#b0b6bf', color: 'white', padding: '10px 16px', fontWeight: 800, fontSize: 16, marginBottom: 24, borderRadius: 4 }}>
             פרטי ההזמנה שלכם (חובה למלא)
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32, fontSize: 15 }}>
-             <div>
-                <strong style={{ marginLeft: 8 }}>חשבונית על שם:</strong> 
-                <span style={{ display:'inline-block', width: '220px', borderBottom: '1px solid black' }}></span>
-             </div>
-             <div>
-                <strong style={{ marginLeft: 8 }}>ח"פ:</strong> 
-                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
-             </div>
-             
-             <div>
-                <strong style={{ marginLeft: 8 }}>איש קשר לתיאום משלוח:</strong> 
-                <span style={{ display:'inline-block', width: '180px', borderBottom: '1px solid black' }}></span>
-             </div>
-             <div>
-                <strong style={{ marginLeft: 8 }}>טלפון איש קשר:</strong> 
-                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
-             </div>
-             
-             <div>
-                <strong style={{ marginLeft: 8 }}>כתובת לאספקה:</strong> 
-                <span style={{ display:'inline-block', width: '220px', borderBottom: '1px solid black' }}></span>
-             </div>
-             <div>
-                <strong style={{ marginLeft: 8 }}>תאריך לאספקה:</strong> 
-                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
-             </div>
+            <div>
+              <strong style={{ marginLeft: 8 }}>חשבונית על שם:</strong>
+              <span>{invoiceCompany || '______________________'}</span>
+            </div>
+            <div>
+              <strong style={{ marginLeft: 8 }}>ח"פ:</strong>
+              <span>{companyNumber || '_________________'}</span>
+            </div>
+
+            <div>
+              <strong style={{ marginLeft: 8 }}>איש קשר לתיאום משלוח:</strong>
+              <span>{contactName || '______________________'}</span>
+            </div>
+            <div>
+              <strong style={{ marginLeft: 8 }}>טלפון איש קשר:</strong>
+              <span>{contactPhone || '_________________'}</span>
+            </div>
+
+            <div>
+              <strong style={{ marginLeft: 8 }}>כתובת לאספקה:</strong>
+              <span>{selectedAddressId === 'new' ? (newAddress.street ? `${newAddress.street}, ${newAddress.city}` : '______________________') : (addresses.find(a => a.id === selectedAddressId)?.street ? `${addresses.find(a => a.id === selectedAddressId)?.street}, ${addresses.find(a => a.id === selectedAddressId)?.city}` : '______________________')}</span>
+            </div>
+            <div>
+              <strong style={{ marginLeft: 8 }}>תאריך לאספקה:</strong>
+              <span>_________________</span>
+            </div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: 40, marginBottom: 32, fontSize: 15 }}>
             <strong>סמנו:</strong>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום בהעברה בנקאית</label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום באמצעות צ'ק לשליח (תוספת 25 ש"ח)</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={paymentMethod === 'bank_transfer'} readOnly style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום בהעברה בנקאית</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={paymentMethod === 'check_delivery'} readOnly style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום באמצעות צ'ק לשליח (תוספת 25 ש"ח)</label>
           </div>
-          
+
           <div style={{ marginBottom: 40, fontSize: 15 }}>
-            <strong style={{ marginLeft: 8 }}>חתימה:</strong> 
-            <span style={{ display:'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
+            <strong style={{ marginLeft: 8 }}>חתימה:</strong>
+            {signature ? (
+               <img src={signature} alt="Signature" style={{ height: 50, display: 'inline-block', verticalAlign: 'bottom' }} />
+            ) : (
+               <span style={{ display: 'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
+            )}
           </div>
         </div>
 
@@ -273,222 +289,223 @@ export default function OrderCheckoutPage() {
       </div>
       {/* ----------------- END PRINT ONLY LAYOUT ----------------- */}
 
-    <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
-      <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
+      <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
+        <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
 
-        {/* Left Side: Forms */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {/* Header */}
-          <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <div>
-               <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
-               <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
-               <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה מול <strong>{org?.name || 'לקוח מזדמן'}</strong>.</p>
-             </div>
-             <div style={{ display: 'flex', gap: 12 }}>
+          {/* Left Side: Forms */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header */}
+            <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
+                <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
+                <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה עבור <strong>{data?.opp_subject || quote?.name || 'לקוח מזדמן'}</strong>.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
                 <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                   🖨️ הדפס
                 </button>
                 <button onClick={() => {
-                   navigator.clipboard.writeText(window.location.href)
-                   alert('הקישור הועתק ללוח!')
+                  navigator.clipboard.writeText(window.location.href)
+                  alert('הקישור הועתק ללוח!')
                 }} style={{ padding: '8px 16px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                   🔗 העתק קישור הזמנה
                 </button>
-             </div>
-          </div>
-
-          {/* Form: Invoice details */}
-          <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
-              פרטי חשבונית ולקוח
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>שם החברה לחשבונית <span style={{ color: '#ef4444' }}>*</span></label>
-                <input
-                  type="text"
-                  value={invoiceCompany}
-                  onChange={e => setInvoiceCompany(e.target.value)}
-                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, outline: 'none' }}
-                  placeholder="הקלד שם רשמי"
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>ח.פ / עוסק מורשה <span style={{ color: '#ef4444' }}>*</span></label>
-                <input
-                  type="text"
-                  value={companyNumber}
-                  onChange={e => setCompanyNumber(e.target.value)}
-                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, outline: 'none' }}
-                  placeholder="למשל: 512345678"
-                  dir="ltr"
-                />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>שם לקוח / איש קשר</label>
-                <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="שם איש קשר" />
+
+            {/* Form: Invoice details */}
+            <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
+                פרטי חשבונית ולקוח
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>שם החברה לחשבונית <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    type="text"
+                    value={invoiceCompany}
+                    onChange={e => setInvoiceCompany(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, outline: 'none' }}
+                    placeholder="הקלד שם רשמי"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>ח.פ / עוסק מורשה <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    type="text"
+                    value={companyNumber}
+                    onChange={e => setCompanyNumber(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, outline: 'none' }}
+                    placeholder="למשל: 512345678"
+                    dir="ltr"
+                  />
+                </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>טלפון</label>
-                <input type="tel" dir="ltr" value={contactPhone} onChange={e => setContactPhone(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="טלפון" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>אימייל</label>
-                <input type="email" dir="ltr" value={contactEmail} onChange={e => setContactEmail(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="אימייל" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>שם לקוח / איש קשר</label>
+                  <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="שם איש קשר" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>טלפון</label>
+                  <input type="tel" dir="ltr" value={contactPhone} onChange={e => setContactPhone(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="טלפון" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>אימייל</label>
+                  <input type="email" dir="ltr" value={contactEmail} onChange={e => setContactEmail(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="אימייל" />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Form: Delivery */}
-          <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
-              כתובת אספקה
-            </h2>
+            {/* Form: Delivery */}
+            <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
+                כתובת אספקה
+              </h2>
 
-            {addresses.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-                {addresses.map(addr => (
-                  <label key={addr.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, border: selectedAddressId === addr.id ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: selectedAddressId === addr.id ? '#f0fdf4' : 'transparent', transition: 'all 0.2s' }}>
-                    <input type="radio" value={addr.id} checked={selectedAddressId === addr.id} onChange={() => setSelectedAddressId(addr.id)} style={{ accentColor: '#4caf50', width: 18, height: 18 }} />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{addr.label || 'כתובת קיימת'}</div>
-                      <div style={{ fontSize: 13, color: '#64748b' }}>{addr.street}, {addr.city} {addr.contact_name ? `(${addr.contact_name} - ${addr.contact_phone})` : ''}</div>
-                    </div>
+              {addresses.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                  {addresses.map(addr => (
+                    <label key={addr.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, border: selectedAddressId === addr.id ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: selectedAddressId === addr.id ? '#f0fdf4' : 'transparent', transition: 'all 0.2s' }}>
+                      <input type="radio" value={addr.id} checked={selectedAddressId === addr.id} onChange={() => setSelectedAddressId(addr.id)} style={{ accentColor: '#4caf50', width: 18, height: 18 }} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{addr.label || 'כתובת קיימת'}</div>
+                        <div style={{ fontSize: 13, color: '#64748b' }}>{addr.street}, {addr.city} {addr.contact_name ? `(${addr.contact_name} - ${addr.contact_phone})` : ''}</div>
+                      </div>
+                    </label>
+                  ))}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, border: selectedAddressId === 'new' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: selectedAddressId === 'new' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s' }}>
+                    <input type="radio" value="new" checked={selectedAddressId === 'new'} onChange={() => setSelectedAddressId('new')} style={{ accentColor: '#4caf50', width: 18, height: 18 }} />
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>הזנת כתובת חדשה</div>
                   </label>
-                ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, border: selectedAddressId === 'new' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: selectedAddressId === 'new' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s' }}>
-                  <input type="radio" value="new" checked={selectedAddressId === 'new'} onChange={() => setSelectedAddressId('new')} style={{ accentColor: '#4caf50', width: 18, height: 18 }} />
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>הזנת כתובת חדשה</div>
+                </div>
+              )}
+
+              {selectedAddressId === 'new' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8fafc', padding: 20, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>תווית הכתובת (למשל: סניף מרכזי)</label>
+                    <input type="text" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="סניף / ייעוד הכתובת" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>עיר <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input type="text" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="עיר" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>רחוב <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input type="text" value={newAddress.street} onChange={e => setNewAddress({ ...newAddress, street: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="רחוב" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>איש קשר לאספקה</label>
+                    <input type="text" value={newAddress.contact_name} onChange={e => setNewAddress({ ...newAddress, contact_name: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="שם איש קשר" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>טלפון לאספקה</label>
+                    <input type="tel" dir="ltr" value={newAddress.contact_phone} onChange={e => setNewAddress({ ...newAddress, contact_phone: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="050-0000000" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Form: Payment Method */}
+            <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
+                אמצעי תשלום
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 20, border: paymentMethod === 'bank_transfer' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'bank_transfer' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s', textAlign: 'center' }}>
+                  <input type="radio" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={() => setPaymentMethod('bank_transfer')} style={{ display: 'none' }} />
+                  <div style={{ fontSize: 32, opacity: paymentMethod === 'bank_transfer' ? 1 : 0.4 }}>🏦</div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>העברה בנקאית</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>תשלום מראש לחשבון החברה.</div>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 20, border: paymentMethod === 'check_delivery' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'check_delivery' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s', textAlign: 'center' }}>
+                  <input type="radio" value="check_delivery" checked={paymentMethod === 'check_delivery'} onChange={() => setPaymentMethod('check_delivery')} style={{ display: 'none' }} />
+                  <div style={{ fontSize: 32, opacity: paymentMethod === 'check_delivery' ? 1 : 0.4 }}>🚚</div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>צ׳ק מזומן לשליח</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>כרוך בתוספת טיפול בסך 25 ₪ לחיוב.</div>
+                  </div>
                 </label>
               </div>
-            )}
+            </div>
 
-            {selectedAddressId === 'new' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8fafc', padding: 20, borderRadius: 8, border: '1px solid #cbd5e1' }}>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>תווית הכתובת (למשל: סניף מרכזי)</label>
-                  <input type="text" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="סניף / ייעוד הכתובת" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>עיר <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="עיר" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>רחוב <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" value={newAddress.street} onChange={e => setNewAddress({ ...newAddress, street: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="רחוב" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>איש קשר לאספקה</label>
-                  <input type="text" value={newAddress.contact_name} onChange={e => setNewAddress({ ...newAddress, contact_name: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="שם איש קשר" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>טלפון לאספקה</label>
-                  <input type="tel" dir="ltr" value={newAddress.contact_phone} onChange={e => setNewAddress({ ...newAddress, contact_phone: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="050-0000000" />
-                </div>
+            {/* Form: Signature & Actions */}
+            <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
+                חתימה מרחוק
+              </h2>
+              <div className="no-print" style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>אנא חתום את שמך כמורשה חתימה לאישור כל תנאי ההזמנה.</p>
+                <SignaturePad onSignatureChange={setSignature} />
               </div>
-            )}
-          </div>
 
-          {/* Form: Payment Method */}
-          <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
-              אמצעי תשלום
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 20, border: paymentMethod === 'bank_transfer' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'bank_transfer' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s', textAlign: 'center' }}>
-                <input type="radio" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={() => setPaymentMethod('bank_transfer')} style={{ display: 'none' }} />
-                <div style={{ fontSize: 32, opacity: paymentMethod === 'bank_transfer' ? 1 : 0.4 }}>🏦</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>העברה בנקאית</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>תשלום מראש לחשבון החברה.</div>
-                </div>
-              </label>
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 20, border: paymentMethod === 'check_delivery' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'check_delivery' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s', textAlign: 'center' }}>
-                <input type="radio" value="check_delivery" checked={paymentMethod === 'check_delivery'} onChange={() => setPaymentMethod('check_delivery')} style={{ display: 'none' }} />
-                <div style={{ fontSize: 32, opacity: paymentMethod === 'check_delivery' ? 1 : 0.4 }}>🚚</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>צ׳ק מזומן לשליח</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>כרוך בתוספת טיפול בסך 25 ₪ לחיוב.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* Form: Signature & Actions */}
-          <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
-              חתימה מרחוק
-            </h2>
-            <div className="no-print" style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>אנא חתום את שמך כמורשה חתימה לאישור כל תנאי ההזמנה.</p>
-              <SignaturePad onSignatureChange={setSignature} />
+              <button
+                className="no-print"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                style={{ width: '100%', padding: '16px 24px', background: isSubmitting ? '#94a3b8' : '#4caf50', color: 'white', border: 'none', borderRadius: 12, fontSize: 18, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(76, 175, 80, 0.4)', transition: 'all 0.2s' }}
+              >
+                {isSubmitting ? 'מעבד הזמנה...' : 'אישור וסיום הזמנה 🚀'}
+              </button>
             </div>
 
-            <button
-              className="no-print"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              style={{ width: '100%', padding: '16px 24px', background: isSubmitting ? '#94a3b8' : '#4caf50', color: 'white', border: 'none', borderRadius: 12, fontSize: 18, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(76, 175, 80, 0.4)', transition: 'all 0.2s' }}
-            >
-              {isSubmitting ? 'מעבד הזמנה...' : 'אישור וסיום הזמנה 🚀'}
-            </button>
           </div>
 
-        </div>
+          {/* Right Side: Order Summary */}
+          <div style={{ position: 'sticky', top: 40, background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, borderBottom: '2px solid #e2e8f0', paddingBottom: 16, margin: 0 }}>סיכום ההזמנה</h3>
 
-        {/* Right Side: Order Summary */}
-        <div style={{ position: 'sticky', top: 40, background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, borderBottom: '2px solid #e2e8f0', paddingBottom: 16, margin: 0 }}>סיכום ההזמנה</h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto', paddingRight: 8 }}>
-            {items.map((item: any) => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 13, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
-                <div style={{ flex: 1, paddingLeft: 12 }}>
-                  <div style={{ fontWeight: 600 }}>{item.product_name}</div>
-                  {item.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{item.description}</div>}
-                  <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{item.quantity} × ₪{parseFloat(item.unit_price).toFixed(2)} {item.discount_percent > 0 ? `(-${item.discount_percent}%)` : ''}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto', paddingRight: 8 }}>
+              {items.map((item: any) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 13, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
+                  <div style={{ flex: 1, paddingLeft: 12 }}>
+                    <div style={{ fontWeight: 600 }}>{item.product_name}</div>
+                    {item.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{item.description}</div>}
+                    <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{item.quantity} × ₪{parseFloat(item.unit_price).toFixed(2)} {item.discount_percent > 0 ? `(-${item.discount_percent}%)` : ''}</div>
+                  </div>
+                  <div style={{ fontWeight: 600 }}>₪{parseFloat(item.line_total).toFixed(2)}</div>
                 </div>
-                <div style={{ fontWeight: 600 }}>₪{parseFloat(item.line_total).toFixed(2)}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '2px dashed #e2e8f0', paddingTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                <span>סה״כ פריטים (לפני מע"מ)</span>
+                <span>₪{parseFloat(quote.subtotal).toFixed(2)}</span>
               </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '2px dashed #e2e8f0', paddingTop: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-              <span>סה״כ פריטים (לפני מע"מ)</span>
-              <span>₪{parseFloat(quote.subtotal).toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-              <span>עלות שילוח (לפני מע"מ)</span>
-              <span>₪{parseFloat(quote.shipping_cost).toFixed(2)}</span>
-            </div>
-            {paymentMethod === 'check_delivery' && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#f59e0b', fontWeight: 600 }}>
-                <span>תוספת צ׳ק לשליח (כולל מע"מ)</span>
-                <span>₪25.00</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                <span>עלות שילוח (לפני מע"מ)</span>
+                <span>₪{parseFloat(quote.shipping_cost).toFixed(2)}</span>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-              <span>מע״מ (18%)</span>
-              <span>₪{((parseFloat(quote.subtotal) + parseFloat(quote.shipping_cost)) * 0.18).toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
-              <span>סה״כ לתשלום אישור הזמנה (כולל מע״מ)</span>
-              <span>₪{calculateFinalTotal().toFixed(2)}</span>
+              {paymentMethod === 'check_delivery' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#f59e0b', fontWeight: 600 }}>
+                  <span>תוספת צ׳ק לשליח (כולל מע"מ)</span>
+                  <span>₪25.00</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                <span>מע״מ (18%)</span>
+                <span>₪{((parseFloat(quote.subtotal) + parseFloat(quote.shipping_cost)) * 0.18).toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
+                <span>סה״כ לתשלום אישור הזמנה (כולל מע״מ)</span>
+                <span>₪{calculateFinalTotal().toFixed(2)}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-      </main>
-      <style dangerouslySetInnerHTML={{__html: `
+        </main>
+        <style dangerouslySetInnerHTML={{
+          __html: `
         @media print {
           body { 
             background: white !important; 
@@ -505,7 +522,7 @@ export default function OrderCheckoutPage() {
           }
         }
       `}} />
-    </div>
+      </div>
     </>
   )
 }

@@ -31,17 +31,21 @@ export async function GET(
   const { data: quote } = await supabase.from('quotes').select('*').eq('id', quoteId).single()
   const { data: items } = await supabase.from('quote_items').select('*').eq('quote_id', quoteId).order('sort_order')
 
-  // 3. Fetch Organization + Addresses
+  // 3. Fetch Organization + Addresses + Subject
   let org = null
   let addresses = []
+  let opp_subject = ''
   if (order.opportunity_id) {
-     const { data: oppData } = await supabase.from('opportunities').select('organization_id').eq('id', order.opportunity_id).single()
-     if (oppData?.organization_id) {
-         const { data: orgData } = await supabase.from('organizations').select('*').eq('id', oppData.organization_id).single()
-         org = orgData
-         
-         const { data: addrs } = await supabase.from('delivery_addresses').select('*').eq('organization_id', oppData.organization_id)
-         addresses = addrs || []
+     const { data: oppData } = await supabase.from('opportunities').select('organization_id, subject').eq('id', order.opportunity_id).single()
+     if (oppData) {
+         opp_subject = oppData.subject || ''
+         if (oppData.organization_id) {
+             const { data: orgData } = await supabase.from('organizations').select('*').eq('id', oppData.organization_id).single()
+             org = orgData
+             
+             const { data: addrs } = await supabase.from('delivery_addresses').select('*').eq('organization_id', oppData.organization_id)
+             addresses = addrs || []
+         }
      }
   }
   
@@ -59,7 +63,7 @@ export async function GET(
     }
   }
 
-  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact })
+  return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact, opp_subject })
 }
 
 export async function POST(
