@@ -70,6 +70,12 @@ export default function OrderCheckoutPage() {
           setPaymentMethod(json.payment_method)
         }
 
+        if (json.contact) {
+            setContactName(json.contact.full_name || '')
+            setContactPhone(json.contact.phone || '')
+            setContactEmail(json.contact.email || '')
+        }
+
       } catch (err: any) {
         setError(err.message)
       } finally {
@@ -149,7 +155,125 @@ export default function OrderCheckoutPage() {
   const { quote, items, org, addresses } = data
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
+    <>
+      {/* ----------------- PRINT ONLY LAYOUT ----------------- */}
+      <div className="print-only-layout" style={{ display: 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: 40, direction: 'rtl' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 100 }} />
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>
+            {new Date(quote?.created_at || new Date()).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} {new Date(quote?.created_at || new Date()).toLocaleDateString('he-IL')}
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>
+            לכבוד: {org?.name || 'לקוח מזדמן'} {contactName ? `- ${contactName}` : ''}
+          </div>
+        </div>
+
+        <h1 style={{ fontSize: 24, fontWeight: 900, textAlign: 'right', marginBottom: 30 }}>הצעת מחיר {quote?.quote_number || quoteId.substring(0, 4)}</h1>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 20, fontSize: 14 }}>
+          <thead>
+            <tr style={{ background: '#b0b6bf', color: 'white' }}>
+              <th style={{ padding: 12, textAlign: 'right', fontWeight: 700 }}>מוצר</th>
+              <th style={{ padding: 12, textAlign: 'right', fontWeight: 700 }}>תיאור</th>
+              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>כמות</th>
+              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>מחיר</th>
+              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>סה"כ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item: any) => (
+              <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: 12, fontWeight: 800 }}>{item.product_name}</td>
+                <td style={{ padding: 12 }}>{item.description || ''}</td>
+                <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(item.unit_price).toFixed(2)}</td>
+                <td style={{ padding: 12, textAlign: 'center', fontWeight: 800 }}>₪{parseFloat(item.line_total).toFixed(2)}</td>
+              </tr>
+            ))}
+
+            <tr style={{ background: '#f1f5f9' }}>
+              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
+              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>סכום מוצרים</td>
+              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(quote?.subtotal || 0).toFixed(2)}</td>
+            </tr>
+            <tr style={{ background: '#f8fafc' }}>
+              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
+              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>משלוח</td>
+              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(quote?.shipping_cost || 0).toFixed(2)}</td>
+            </tr>
+            <tr style={{ background: '#f1f5f9' }}>
+              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
+              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>מע"מ</td>
+              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{(((parseFloat(quote?.subtotal || 0) + parseFloat(quote?.shipping_cost || 0))) * 0.18).toFixed(2)}</td>
+            </tr>
+            <tr style={{ background: '#e2e8f0' }}>
+              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
+              <td style={{ padding: 12, textAlign: 'right', fontWeight: 900, fontSize: 16 }}>סה"כ לתשלום</td>
+              <td style={{ padding: 12, textAlign: 'center', fontWeight: 900, fontSize: 16 }}>₪{calculateFinalTotal().toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style={{ marginTop: 50 }}>
+          <div style={{ background: '#b0b6bf', color: 'white', padding: '10px 16px', fontWeight: 800, fontSize: 16, marginBottom: 24, borderRadius: 4 }}>
+            פרטי ההזמנה שלכם (חובה למלא)
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32, fontSize: 15 }}>
+             <div>
+                <strong style={{ marginLeft: 8 }}>חשבונית על שם:</strong> 
+                <span style={{ display:'inline-block', width: '220px', borderBottom: '1px solid black' }}></span>
+             </div>
+             <div>
+                <strong style={{ marginLeft: 8 }}>ח"פ:</strong> 
+                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
+             </div>
+             
+             <div>
+                <strong style={{ marginLeft: 8 }}>איש קשר לתיאום משלוח:</strong> 
+                <span style={{ display:'inline-block', width: '180px', borderBottom: '1px solid black' }}></span>
+             </div>
+             <div>
+                <strong style={{ marginLeft: 8 }}>טלפון איש קשר:</strong> 
+                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
+             </div>
+             
+             <div>
+                <strong style={{ marginLeft: 8 }}>כתובת לאספקה:</strong> 
+                <span style={{ display:'inline-block', width: '220px', borderBottom: '1px solid black' }}></span>
+             </div>
+             <div>
+                <strong style={{ marginLeft: 8 }}>תאריך לאספקה:</strong> 
+                <span style={{ display:'inline-block', width: '150px', borderBottom: '1px solid black' }}></span>
+             </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 40, marginBottom: 32, fontSize: 15 }}>
+            <strong>סמנו:</strong>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום בהעברה בנקאית</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום באמצעות צ'ק לשליח (תוספת 25 ש"ח)</label>
+          </div>
+          
+          <div style={{ marginBottom: 40, fontSize: 15 }}>
+            <strong style={{ marginLeft: 8 }}>חתימה:</strong> 
+            <span style={{ display:'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 80, color: '#131b40', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 4 }}>בברכה,</div>
+          <div style={{ fontWeight: 900, fontSize: 24, marginBottom: 8 }}>קונפטיקס</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>מתנות ממותגות ומיתוג אירועים</div>
+          <div style={{ fontSize: 14, fontWeight: 700, direction: 'ltr' }}>052-8350600 | confettixparty@gmail.com</div>
+          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 60, marginTop: 12 }} />
+        </div>
+      </div>
+      {/* ----------------- END PRINT ONLY LAYOUT ----------------- */}
+
+    <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
       <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
 
         {/* Left Side: Forms */}
@@ -157,6 +281,7 @@ export default function OrderCheckoutPage() {
           {/* Header */}
           <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
              <div>
+               <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
                <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
                <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>הזמנה מקושרת לעסקה מול <strong>{org?.name || 'לקוח מזדמן'}</strong>.</p>
              </div>
@@ -165,14 +290,10 @@ export default function OrderCheckoutPage() {
                   🖨️ הדפס
                 </button>
                 <button onClick={() => {
-                  if (navigator.share) {
-                     navigator.share({ title: 'הזמנה לאישור', url: window.location.href })
-                  } else {
-                     navigator.clipboard.writeText(window.location.href)
-                     alert('הקישור הועתק ללוח!')
-                  }
+                   navigator.clipboard.writeText(window.location.href)
+                   alert('הקישור הועתק ללוח!')
                 }} style={{ padding: '8px 16px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  🔗 שתף
+                  🔗 העתק קישור הזמנה
                 </button>
              </div>
           </div>
@@ -311,10 +432,6 @@ export default function OrderCheckoutPage() {
               <SignaturePad onSignatureChange={setSignature} />
             </div>
 
-            <div className="print-only" style={{ display: 'none', marginTop: 40, marginBottom: 60 }}>
-               <strong>חתימת הלקוח המאשר: </strong> <span style={{ display: 'inline-block', width: 300, borderBottom: '1px solid black' }}></span>
-            </div>
-
             <button
               className="no-print"
               onClick={handleSubmit}
@@ -377,24 +494,18 @@ export default function OrderCheckoutPage() {
             background: white !important; 
             padding: 0 !important;
           }
-          main { 
-            max-width: 100% !important; 
-            display: block !important; 
-          }
-          .no-print { 
+          .web-main-container { 
             display: none !important; 
           }
-          .print-only { 
+          .print-only-layout { 
             display: block !important; 
           }
-          div[style*="boxShadow"] {
-            box-shadow: none !important;
-            border: 1px solid #e2e8f0 !important;
-            margin-bottom: 20px !important;
+          @page {
+            margin: 1.5cm;
           }
-          h1, h2, h3 { color: black !important; }
         }
       `}} />
     </div>
+    </>
   )
 }
