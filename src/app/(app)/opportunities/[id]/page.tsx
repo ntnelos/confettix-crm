@@ -289,31 +289,32 @@ export default function OpportunityDetailsPage() {
               </div>
               <div style={{ padding: 20 }}>
                 {/* Form to insert a new update */}
-                <form onSubmit={handleAddUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32, background: 'var(--surface-2)', padding: 16, borderRadius: 8, border: '1px solid var(--border)' }}>
-                   <div style={{ display: 'flex', gap: 12 }}>
-                      <select 
-                        className="form-select" 
-                        value={newUpdate.type} 
-                        onChange={e => setNewUpdate({...newUpdate, type: e.target.value as any})}
-                        style={{ minWidth: 140 }}
-                      >
-                         <option value="note">📝 פתק / הערה</option>
-                         <option value="phone">📞 שיחה טלפונית</option>
-                         <option value="whatsapp">💬 הודעת WhatsApp</option>
-                         <option value="email">📧 דואר אלקטרוני</option>
-                         <option value="meeting">🤝 פגישה פרונטלית</option>
-                      </select>
-                      <input 
-                         className="form-input" 
-                         style={{ flex: 1 }} 
-                         placeholder="תעד משהו מהיר (מסקנה מהשיחה, משימה להמשך...)" 
-                         value={newUpdate.content}
-                         onChange={e => setNewUpdate({...newUpdate, content: e.target.value})}
-                         required
-                      />
-                      <button type="submit" className="btn btn-primary" disabled={isSubmittingUpdate} style={{ alignSelf: 'stretch' }}>
-                         הוסף
-                      </button>
+                <form onSubmit={handleAddUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32, background: 'var(--surface-2)', padding: 20, borderRadius: 12, border: '1px solid var(--border)' }}>
+                   <textarea
+                     className="form-input"
+                     rows={5}
+                     placeholder="תעד כאן את תוכן השיחה, המסקנות או המשימות להמשך..."
+                     value={newUpdate.content}
+                     onChange={e => setNewUpdate({...newUpdate, content: e.target.value})}
+                     required
+                     style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6 }}
+                   />
+                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                     <select
+                       className="form-select"
+                       value={newUpdate.type}
+                       onChange={e => setNewUpdate({...newUpdate, type: e.target.value as any})}
+                       style={{ minWidth: 180 }}
+                     >
+                        <option value="note">📝 פתק / הערה</option>
+                        <option value="phone">📞 שיחה טלפונית</option>
+                        <option value="whatsapp">💬 הודעת WhatsApp</option>
+                        <option value="email">📧 דואר אלקטרוני</option>
+                        <option value="meeting">🤝 פגישה פרונטלית</option>
+                     </select>
+                     <button type="submit" className="btn btn-primary" disabled={isSubmittingUpdate} style={{ marginRight: 'auto' }}>
+                        {isSubmittingUpdate ? 'שומר...' : '+ הוסף תיעוד'}
+                     </button>
                    </div>
                 </form>
 

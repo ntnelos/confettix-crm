@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
+import { useRouter } from 'next/navigation'
 
 type Quote = Database['public']['Tables']['quotes']['Row']
 type QuoteItem = Database['public']['Tables']['quote_items']['Row']
 
 export default function QuotesManager({ opportunityId }: { opportunityId: string }) {
   const supabase = createClient()
+  const router = useRouter()
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [itemsMap, setItemsMap] = useState<Record<string, QuoteItem[]>>({})
   const [loading, setLoading] = useState(true)
@@ -17,6 +19,12 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null)
+
+  // Duplication modal state
+  const [showDupModal, setShowDupModal] = useState(false)
+  const [dupSourceQuoteId, setDupSourceQuoteId] = useState<string | null>(null)
+  const [recentOpps, setRecentOpps] = useState<any[]>([])
+  const [isDuplicating, setIsDuplicating] = useState(false)
 
   useEffect(() => {
     fetchQuotes()
@@ -209,6 +217,97 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
      recalculateQuote(updatedQuote, items)
   }
 
+  // ---- Duplication functions ----
+  const openDupModal = async (quoteId: string) => {
+    setDupSourceQuoteId(quoteId)
+    setShowDupModal(true)
+    // Fetch recent opportunities
+    const { data } = await (supabase.from('opportunities') as any)
+      .select('id, subject, created_at')
+      .neq('id', opportunityId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (data) setRecentOpps(data)
+  }
+
+  const duplicateQuoteSameOpp = async () => {
+    if (!dupSourceQuoteId) return
+    setIsDuplicating(true)
+    const sourceQuote = quotes.find(q => q.id === dupSourceQuoteId)
+    const sourceItems = itemsMap[dupSourceQuoteId] || []
+    if (!sourceQuote) { setIsDuplicating(false); return }
+
+    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
+      opportunity_id: opportunityId,
+      name: `${sourceQuote.name} (העתק)`,
+      status: 'draft',
+      subtotal: sourceQuote.subtotal,
+      vat_rate: sourceQuote.vat_rate,
+      shipping_cost: sourceQuote.shipping_cost,
+      total_with_vat: sourceQuote.total_with_vat,
+      version: (sourceQuote.version || 1) + 1
+    }).select().single()
+
+    if (newQuote) {
+      for (const item of sourceItems) {
+        await (supabase.from('quote_items') as any).insert({
+          quote_id: newQuote.id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent,
+          line_total: item.line_total,
+          woo_product_id: item.woo_product_id,
+          woo_product_url: item.woo_product_url,
+          image_url: item.image_url,
+          sort_order: item.sort_order
+        })
+      }
+      setShowDupModal(false)
+      fetchQuotes()
+    }
+    setIsDuplicating(false)
+  }
+
+  const duplicateToExistingOpp = async (targetOppId: string) => {
+    if (!dupSourceQuoteId) return
+    setIsDuplicating(true)
+    const sourceQuote = quotes.find(q => q.id === dupSourceQuoteId)
+    const sourceItems = itemsMap[dupSourceQuoteId] || []
+    if (!sourceQuote) { setIsDuplicating(false); return }
+
+    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
+      opportunity_id: targetOppId,
+      name: `${sourceQuote.name} (מועתק)`,
+      status: 'draft',
+      subtotal: sourceQuote.subtotal,
+      vat_rate: sourceQuote.vat_rate,
+      shipping_cost: sourceQuote.shipping_cost,
+      total_with_vat: sourceQuote.total_with_vat,
+      version: 1
+    }).select().single()
+
+    if (newQuote) {
+      for (const item of sourceItems) {
+        await (supabase.from('quote_items') as any).insert({
+          quote_id: newQuote.id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent,
+          line_total: item.line_total,
+          woo_product_id: item.woo_product_id,
+          woo_product_url: item.woo_product_url,
+          image_url: item.image_url,
+          sort_order: item.sort_order
+        })
+      }
+      setShowDupModal(false)
+      router.push(`/opportunities/${targetOppId}`)
+    }
+    setIsDuplicating(false)
+  }
+
   if (loading) return <div style={{ padding: 20 }}>טוען הצעות מחיר...</div>
 
   return (
@@ -318,13 +417,24 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                          {(itemsMap[activeQuoteId] || []).map(item => (
                             <tr key={item.id}>
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
-                                <input 
-                                  value={item.product_name} 
-                                  onChange={e => updateItem(activeQuoteId, item.id, 'product_name', e.target.value)}
-                                  style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500 }}
-                                />
-                                {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)' }}>🔗 צפה באתר</a>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ color: 'var(--pink)', opacity: 0.65, flexShrink: 0 }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
+                                      <line x1="12" y1="22" x2="12" y2="7"/>
+                                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+                                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+                                    </svg>
+                                  </span>
+                                  <input
+                                    value={item.product_name}
+                                    onChange={e => updateItem(activeQuoteId, item.id, 'product_name', e.target.value)}
+                                    style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500 }}
+                                  />
+                                </div>
+                                {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--blue)', marginRight: 19 }}>🔗 צפה</a>}
                               </td>
+
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
                                 <input 
                                   type="number" min="1"
@@ -364,8 +474,17 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                     </table>
                  )}
                  
-                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-                    
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 20, gap: 16, flexWrap: 'wrap' }}>
+                    {/* Duplicate buttons */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שכפול הצעה:</div>
+                      <button
+                        onClick={() => openDupModal(activeQuoteId)}
+                        style={{ padding: '8px 14px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}
+                      >⊞ אפשרויות שכפול</button>
+                    </div>
+
+                    {/* Totals */}
                     <div style={{ width: 300, background: 'var(--surface)', padding: 16, borderRadius: 8, fontSize: 14 }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                           <span>סה״כ מוצרים:</span>
@@ -375,7 +494,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                           <span>עלות משלוח:</span>
                           <div style={{ display: 'flex', alignItems: 'center', width: 80 }}>
                             <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>₪</span>
-                            <input 
+                            <input
                                type="number"
                                value={quotes.find(q=>q.id===activeQuoteId)?.shipping_cost || 0}
                                onChange={e => updateQuoteShipping(activeQuoteId, parseFloat(e.target.value)||0)}
@@ -392,10 +511,69 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
                           <span>₪{quotes.find(q=>q.id===activeQuoteId)?.total_with_vat?.toFixed(2)}</span>
                        </div>
                     </div>
-                 </div>
-               </div>
+                  </div>
+                </div>
+             </div>
+           )}
+         </div>
+       )}
+
+      {/* Duplication Modal */}
+      {showDupModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 32, width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>שכפול הצעת מחיר</h2>
+              <button onClick={() => setShowDupModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
             </div>
-          )}
+
+            {/* Option 1: Same opportunity */}
+            <div style={{ padding: 16, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)', flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>⊞ שכפל להזדמנות זו</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>יצירת הצעה חדשה עם אותם פריטים באותה הזדמנות.</div>
+              <button onClick={duplicateQuoteSameOpp} disabled={isDuplicating} className="btn btn-primary" style={{ fontSize: 13 }}>
+                {isDuplicating ? 'משכפל...' : 'שכפל כאן'}
+              </button>
+            </div>
+
+            {/* Option 2: Existing opportunity */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
+              <div style={{ fontWeight: 600, flexShrink: 0 }}>🔀 שכפל להזדמנות קיימת</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>בחר הזדמנות אחרת לשכפל אליה (עד 50 אחרונות):</div>
+              <div style={{ overflowY: 'auto', flex: 1, border: '1px solid var(--border)', borderRadius: 8 }}>
+                {recentOpps.length === 0 ? (
+                  <div style={{ padding: 16, color: 'var(--text-muted)', textAlign: 'center' }}>טוען הזדמנויות...</div>
+                ) : recentOpps.map(opp => (
+                  <div
+                    key={opp.id}
+                    onClick={() => !isDuplicating && duplicateToExistingOpp(opp.id)}
+                    style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    onMouseOver={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'white')}
+                  >
+                    <span>{opp.subject}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{new Date(opp.created_at).toLocaleDateString('he-IL')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Option 3: New opportunity */}
+            <div style={{ padding: 16, background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)', flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>✨ שכפל להזדמנות חדשה</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>פתח טופס הזדמנות חדשה – ההצעה תשוכפל אוטומטית לאחר יצירתה.</div>
+              <button
+                onClick={() => {
+                  if (dupSourceQuoteId) {
+                    sessionStorage.setItem('cloneQuoteId', dupSourceQuoteId)
+                    router.push('/opportunities/new?cloneFrom=' + dupSourceQuoteId)
+                  }
+                }}
+                className="btn btn-secondary"
+                style={{ fontSize: 13 }}
+              >צור הזדמנות חדשה עם הצעה זו</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
