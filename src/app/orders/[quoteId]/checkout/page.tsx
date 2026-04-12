@@ -313,12 +313,13 @@ export default function OrderCheckoutPage() {
                    <span>₪25.00</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
-                 <span>סה״כ לתשלום</span>
-                 <span>₪{calculateFinalTotal().toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                 <span>מע״מ (18%)</span>
+                 <span>₪{((parseFloat(quote.subtotal) + parseFloat(quote.shipping_cost)) * 0.18).toFixed(2)}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
-                 הסכום הסופי כולל מע״מ כחוק (18%).
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
+                 <span>סה״כ לתשלום אישור הזמנה (כולל מע״מ)</span>
+                 <span>₪{calculateFinalTotal().toFixed(2)}</span>
               </div>
            </div>
         </div>
