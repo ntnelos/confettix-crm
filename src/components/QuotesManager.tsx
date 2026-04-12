@@ -132,7 +132,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
       .insert({
         quote_id: quoteId,
         product_name,
-        description: wcProduct ? (wcProduct.short_description || wcProduct.description || '') : '',
+        description: wcProduct ? (wcProduct.description || wcProduct.short_description || '') : '',
         quantity,
         unit_price,
         discount_percent: 0,

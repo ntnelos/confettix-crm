@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Uses service role key – bypasses RLS entirely
-// Safe because this route only READS public quote preview data
 const getServiceClient = () =>
   createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,10 +10,10 @@ const getServiceClient = () =>
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { quoteId: string } }
+  { params }: { params: Promise<{ quoteId: string }> }  // Next.js 15+ params is a Promise
 ) {
+  const { quoteId } = await params   // must await!
   const supabase = getServiceClient()
-  const { quoteId } = params
 
   // 1. Quote
   const { data: quote, error: qErr } = await supabase
@@ -25,7 +23,10 @@ export async function GET(
     .single()
 
   if (!quote) {
-    return NextResponse.json({ error: 'Quote not found', detail: qErr?.message }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Quote not found', detail: qErr?.message },
+      { status: 404 }
+    )
   }
 
   // 2. Items
@@ -35,7 +36,7 @@ export async function GET(
     .eq('quote_id', quoteId)
     .order('created_at')
 
-  // 3. Opportunity
+  // 3. Opportunity → Contact + Org
   let opp = null, contact = null, org = null
   if (quote.opportunity_id) {
     const { data: oppData } = await supabase
