@@ -1,62 +1,48 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Quote {
-  id: string
-  name: string
-  quote_number: string
-  opportunity_id: string
-  shipping_cost: number
-  vat_rate: number
-  subtotal: number
-  total_with_vat: number
-  created_at: string
+  id: string; name: string; quote_number: string; opportunity_id: string
+  shipping_cost: number; vat_rate: number; subtotal: number; total_with_vat: number; created_at: string
 }
-
 interface QuoteItem {
-  id: string
-  product_name: string
-  description: string
-  quantity: number
-  unit_price: number
-  discount_percent: number
-  line_total: number
-  image_url?: string
-  woo_product_url?: string
+  id: string; product_name: string; description: string; quantity: number
+  unit_price: number; discount_percent: number; line_total: number
+  image_url?: string; woo_product_url?: string
 }
+interface Contact { first_name: string; last_name: string }
+interface Organization { name: string }
+interface Opportunity { subject: string; contact_id: string; organization_id: string }
 
-interface Opportunity {
-  subject: string
-  contact_id: string
-  organization_id: string
-}
-
-interface Contact {
-  first_name: string
-  last_name: string
-}
-
-interface Organization {
-  name: string
-}
+const GiftIcon = () => (
+  <span style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    background: '#f5f5f5', borderRadius: 4, border: '1px dashed #ccc', flexShrink: 0, color: '#aaa' }}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/>
+      <line x1="12" y1="22" x2="12" y2="7"/>
+      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+    </svg>
+  </span>
+)
 
 export default function QuotePreviewPage() {
   const { quoteId } = useParams<{ quoteId: string }>()
   const supabase = createClient()
 
-  const [quote, setQuote] = useState<Quote | null>(null)
-  const [items, setItems] = useState<QuoteItem[]>([])
-  const [opp, setOpp] = useState<Opportunity | null>(null)
+  const [quote, setQuote]     = useState<Quote | null>(null)
+  const [items, setItems]     = useState<QuoteItem[]>([])
+  const [opp, setOpp]         = useState<Opportunity | null>(null)
   const [contact, setContact] = useState<Contact | null>(null)
-  const [org, setOrg] = useState<Organization | null>(null)
+  const [org, setOrg]         = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const [waPhone, setWaPhone] = useState('')
-  const [showWaInput, setShowWaInput] = useState(false)
-  const [emailTo, setEmailTo] = useState('')
+  const [waPhone, setWaPhone]             = useState('')
+  const [showWaInput, setShowWaInput]     = useState(false)
+  const [emailTo, setEmailTo]             = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
 
   useEffect(() => {
@@ -75,17 +61,15 @@ export default function QuotePreviewPage() {
           .select('subject, contact_id, organization_id').eq('id', qData.opportunity_id).single()
         if (oppData) {
           setOpp(oppData)
-
           if (oppData.contact_id) {
-            const { data: cData } = await (supabase.from('contacts') as any)
+            const { data: c } = await (supabase.from('contacts') as any)
               .select('first_name, last_name').eq('id', oppData.contact_id).single()
-            setContact(cData)
+            setContact(c)
           }
-
           if (oppData.organization_id) {
-            const { data: orgData } = await (supabase.from('organizations') as any)
+            const { data: o } = await (supabase.from('organizations') as any)
               .select('name').eq('id', oppData.organization_id).single()
-            setOrg(orgData)
+            setOrg(o)
           }
         }
       }
@@ -109,31 +93,19 @@ export default function QuotePreviewPage() {
     if (!emailTo) return
     const subject = encodeURIComponent(`הצעת מחיר ${quote?.quote_number || ''} - קונפטיקס`)
     const body = encodeURIComponent(
-      `שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס\nמתנות ממותגות ואירועים\n052-8350600\nconfettixparty@gmail.com`
+      `שלום,\n\nמצורפת הצעת המחיר שלנו:\n${window.location.href}\n\nבברכה,\nקונפטיקס\nמתנות ממותגות ואירועים\n052-8350600\noffice@confettix.co.il`
     )
     window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`
   }
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleString('he-IL', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    })
+    new Date(d).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Heebo, sans-serif' }}>
-      טוען...
-    </div>
-  )
-  if (!quote) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Heebo, sans-serif' }}>
-      הצעה לא נמצאה
-    </div>
-  )
+  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>טוען...</div>
+  if (!quote)  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'Heebo,sans-serif' }}>הצעה לא נמצאה</div>
 
-  const contactName = contact
-    ? `${contact.first_name} ${contact.last_name || ''}`.trim()
-    : ''
+  const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : ''
+  const shipping = Number(quote.shipping_cost) || 0
 
   return (
     <>
@@ -142,84 +114,62 @@ export default function QuotePreviewPage() {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { font-family: 'Heebo', sans-serif; direction: rtl; background: #f0f2f5; }
 
-        /* ── Toolbar ── */
         .send-toolbar {
           position: sticky; top: 0; z-index: 100;
           background: #0b1536; color: white;
           padding: 12px 24px;
           display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 12px rgba(0,0,0,.3);
         }
-        .tb-label { font-size: 13px; color: rgba(255,255,255,0.55); margin-left: 4px; }
+        .tb-label { font-size: 13px; color: rgba(255,255,255,.55); }
         .tb-btn {
           padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
           cursor: pointer; border: none; display: flex; align-items: center; gap: 6px;
           transition: opacity .18s;
         }
         .tb-btn:hover { opacity: .82; }
-        .tb-btn.green  { background: #25D366; color: #fff; }
-        .tb-btn.blue   { background: #3B82F6; color: #fff; }
-        .tb-btn.ghost  { background: rgba(255,255,255,.13); color: #fff; border: 1px solid rgba(255,255,255,.3); }
-        .tb-btn.pink   { background: #e40187; color: #fff; }
+        .tb-btn.green { background: #25D366; color: #fff; }
+        .tb-btn.blue  { background: #3B82F6; color: #fff; }
+        .tb-btn.ghost { background: rgba(255,255,255,.13); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+        .tb-btn.pink  { background: #e40187; color: #fff; }
         .inline-input {
           padding: 7px 12px; border-radius: 6px;
           border: 1px solid rgba(255,255,255,.28);
-          background: rgba(255,255,255,.10); color: #fff; font-size: 13px;
+          background: rgba(255,255,255,.1); color: #fff; font-size: 13px;
           outline: none; width: 190px; direction: ltr;
         }
         .inline-input::placeholder { color: rgba(255,255,255,.45); }
 
-        /* ── Quote document ── */
         .quote-doc {
           max-width: 800px; margin: 28px auto 60px;
           background: #fff; padding: 48px 52px;
-          box-shadow: 0 4px 30px rgba(0,0,0,.12);
-          border-radius: 4px;
+          box-shadow: 0 4px 30px rgba(0,0,0,.12); border-radius: 4px;
         }
 
-        /* Header */
+        /* Header – logo on LEFT, meta on RIGHT. Use ltr flex so first child = left */
         .doc-header {
-          display: flex; justify-content: space-between;
-          align-items: flex-start; margin-bottom: 28px;
+          display: flex; flex-direction: row;
+          justify-content: space-between; align-items: flex-start;
+          margin-bottom: 28px;
         }
-        .logo-box {
-          width: 160px; height: 110px;
-          display: flex; align-items: center; justify-content: center;
-          overflow: hidden;
-        }
+        .logo-box { width: 160px; height: 110px; display: flex; align-items: center; }
         .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .doc-meta { font-size: 13px; color: #333; text-align: right; line-height: 1.7; }
+
+        .doc-meta { font-size: 13px; color: #333; text-align: right; line-height: 1.75; }
         .doc-meta .meta-to-label { font-weight: 700; }
-        .doc-meta .meta-org { color: #555; }
         .doc-meta .meta-date { color: #888; font-size: 12px; margin-top: 4px; }
 
-        /* Opportunity title */
-        .doc-title {
-          text-align: center; font-size: 26px; font-weight: 800;
-          margin-bottom: 8px; color: #111;
-        }
-        .doc-subtitle {
-          text-align: center; font-size: 14px; color: #777;
-          margin-bottom: 24px;
-          border-bottom: 2px solid #eee; padding-bottom: 16px;
-        }
+        .doc-title { text-align: center; font-size: 26px; font-weight: 800; margin-bottom: 6px; color: #111; }
+        .doc-subtitle { text-align: center; font-size: 14px; color: #777; margin-bottom: 24px; border-bottom: 2px solid #eee; padding-bottom: 16px; }
 
-        /* Table */
         .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 24px; }
         .quote-table thead tr { background: #c8c8c8; }
-        .quote-table thead th {
-          padding: 10px 12px; text-align: right; font-weight: 700; color: #222;
-          border: 1px solid #bbb;
-        }
+        .quote-table thead th { padding: 10px 12px; text-align: right; font-weight: 700; color: #222; border: 1px solid #bbb; }
         .quote-table tbody tr { border-bottom: 1px solid #e5e5e5; }
         .quote-table tbody tr:nth-child(even) { background: #fafafa; }
-        .quote-table tbody td {
-          padding: 10px 12px; vertical-align: middle; color: #333;
-          border: 1px solid #e5e5e5;
-        }
-        .shipping-row td { background: #f0f0f0; font-style: italic; }
+        .quote-table tbody td { padding: 10px 12px; vertical-align: middle; color: #333; border: 1px solid #e5e5e5; }
+        .shipping-row td { background: #f0f0f0 !important; font-style: italic; }
 
-        /* Disclaimers */
         .disclaimers {
           margin-top: 20px; padding: 14px 20px;
           border: 1px solid #e5e5e5; border-radius: 4px;
@@ -227,34 +177,24 @@ export default function QuotePreviewPage() {
         }
         .disclaimers li { margin-right: 14px; }
 
-        /* Footer */
-        .doc-footer {
-          margin-top: 36px; text-align: center;
-          border-top: 2px solid #e5e5e5; padding-top: 24px;
-        }
+        .doc-footer { margin-top: 36px; text-align: center; border-top: 2px solid #e5e5e5; padding-top: 24px; }
         .doc-footer .footer-greeting { font-size: 13px; color: #666; margin-bottom: 4px; }
         .doc-footer .footer-name { font-size: 22px; font-weight: 800; color: #111; }
         .doc-footer .footer-tagline { font-size: 13px; color: #888; margin-top: 2px; }
         .doc-footer .footer-contact { font-size: 13px; color: #666; margin-top: 8px; }
         .logo-footer { width: 60px; margin: 12px auto 0; display: block; }
 
-        /* ── Print: hide toolbar + screen chrome, show only doc ── */
         @media print {
           .send-toolbar { display: none !important; }
           html, body { background: white !important; }
-          .quote-doc {
-            box-shadow: none !important; margin: 0 !important;
-            max-width: 100% !important; border-radius: 0 !important;
-            padding: 24px 36px !important;
-          }
+          .quote-doc { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; border-radius: 0 !important; padding: 24px 36px !important; }
         }
       `}</style>
 
-      {/* ── Sticky Send Toolbar ── */}
+      {/* ── Toolbar ── */}
       <div className="send-toolbar">
         <span className="tb-label">שלח הצעה:</span>
 
-        {/* WhatsApp */}
         {!showWaInput ? (
           <button className="tb-btn green" onClick={() => { setShowWaInput(true); setShowEmailInput(false) }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -271,7 +211,6 @@ export default function QuotePreviewPage() {
           </>
         )}
 
-        {/* Email */}
         {!showEmailInput ? (
           <button className="tb-btn blue" onClick={() => { setShowEmailInput(true); setShowWaInput(false) }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -287,7 +226,6 @@ export default function QuotePreviewPage() {
           </>
         )}
 
-        {/* Print / PDF */}
         <button className="tb-btn pink" onClick={handlePrint}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="6 9 6 2 18 2 18 9"/>
@@ -298,18 +236,18 @@ export default function QuotePreviewPage() {
         </button>
       </div>
 
-      {/* ── Quote Document ── */}
+      {/* ── Document ── */}
       <div className="quote-doc">
 
-        {/* Header – logo left, meta right */}
+        {/* Header: logo LEFT, meta RIGHT */}
         <div className="doc-header">
-          {/* Logo – no border */}
-          <div className="logo-box">
+          {/* Logo – no border, physically first so it renders on the left */}
+          <div className="logo-box" style={{ direction: 'ltr' }}>
             <img src="/confettix-logo.png" alt="קונפטיקס"
               onError={e => { e.currentTarget.style.display = 'none' }} />
           </div>
 
-          {/* Meta – contact + org + date */}
+          {/* Meta */}
           <div className="doc-meta">
             {contactName && (
               <div>
@@ -317,20 +255,16 @@ export default function QuotePreviewPage() {
                 {contactName}
               </div>
             )}
-            {org?.name && (
-              <div className="meta-org">{org.name}</div>
-            )}
+            {org?.name && <div style={{ color: '#555' }}>{org.name}</div>}
             <div className="meta-date">{formatDate(quote.created_at)}</div>
           </div>
         </div>
 
-        {/* Opportunity subject as document title */}
+        {/* Title */}
         <div className="doc-title">הצעת מחיר {quote.quote_number || ''}</div>
-        {opp?.subject && (
-          <div className="doc-subtitle">{opp.subject}</div>
-        )}
+        {opp?.subject && <div className="doc-subtitle">{opp.subject}</div>}
 
-        {/* Products table */}
+        {/* Table */}
         <table className="quote-table">
           <thead>
             <tr>
@@ -346,10 +280,11 @@ export default function QuotePreviewPage() {
               <tr key={item.id}>
                 <td style={{ fontWeight: 600 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {item.image_url && (
-                      <img src={item.image_url} alt="" width={30} height={30}
-                        style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
-                    )}
+                    {item.image_url
+                      ? <img src={item.image_url} alt="" width={30} height={30}
+                          style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
+                      : <GiftIcon />
+                    }
                     {item.product_name}
                   </div>
                 </td>
@@ -360,14 +295,16 @@ export default function QuotePreviewPage() {
               </tr>
             ))}
 
-            {/* Shipping row if > 0 */}
-            {Number(quote.shipping_cost) > 0 && (
+            {/* Shipping row */}
+            {shipping > 0 && (
               <tr className="shipping-row">
-                <td>משלוח</td>
+                <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 30 }}></span> משלוח
+                </div></td>
                 <td></td>
                 <td style={{ textAlign: 'center' }}>1</td>
-                <td style={{ textAlign: 'center' }}>₪{Number(quote.shipping_cost).toFixed(2)}</td>
-                <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{Number(quote.shipping_cost).toFixed(2)}</td>
+                <td style={{ textAlign: 'center' }}>₪{shipping.toFixed(2)}</td>
+                <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{shipping.toFixed(2)}</td>
               </tr>
             )}
           </tbody>
@@ -380,9 +317,7 @@ export default function QuotePreviewPage() {
             <li>עיצוב חדש בהתאמה אישית – 500 ש״ח.</li>
             <li>מחירים לא כוללים מע״מ.</li>
           </ul>
-          <div style={{ marginTop: 10, fontWeight: 600 }}>
-            תשלום בהעברה בנקאית עם אישור הצעת המחיר
-          </div>
+          <div style={{ marginTop: 10, fontWeight: 600 }}>תשלום בהעברה בנקאית עם אישור הצעת המחיר</div>
         </div>
 
         {/* Footer */}
@@ -390,7 +325,7 @@ export default function QuotePreviewPage() {
           <div className="footer-greeting">בברכה,</div>
           <div className="footer-name">קונפטיקס</div>
           <div className="footer-tagline">מתנות ממותגות ואירועים</div>
-          <div className="footer-contact">טלפון 052-8350600 &nbsp;|&nbsp; confettixparty@gmail.com</div>
+          <div className="footer-contact">טלפון 052-8350600 &nbsp;|&nbsp; office@confettix.co.il</div>
           <img src="/confettix-logo.png" className="logo-footer" alt=""
             onError={e => { e.currentTarget.style.display = 'none' }} />
         </div>

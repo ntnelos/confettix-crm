@@ -197,10 +197,11 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
     const subtotal = items.reduce((sum, item) => sum + item.line_total, 0)
     const shipping = quote.shipping_cost || 0
     const totalWithoutVat = subtotal + shipping
-    const totalWithVat = totalWithoutVat * (1 + (quote.vat_rate / 100))
+    const totalWithVat = totalWithoutVat * 1.18   // Always 18% VAT
     
     const { data } = await (supabase.from('quotes') as any).update({
        subtotal,
+       vat_rate: 18,
        total_with_vat: totalWithVat
     }).eq('id', quote.id).select().single()
     
@@ -208,6 +209,7 @@ export default function QuotesManager({ opportunityId }: { opportunityId: string
        setQuotes(quotes.map(q => q.id === data.id ? data : q))
     }
   }
+
   
   const updateQuoteShipping = async (quoteId: string, shippingCost: number) => {
      const quote = quotes.find(q => q.id === quoteId)
