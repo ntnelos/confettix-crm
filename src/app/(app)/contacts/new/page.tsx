@@ -17,6 +17,7 @@ export default function NewContactPage() {
     mobile: '',
     phone: '',
     organization_id: '',
+    notes: '',
   })
   
   const [showOrgSearchModal, setShowOrgSearchModal] = useState(false)
