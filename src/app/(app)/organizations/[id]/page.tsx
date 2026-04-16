@@ -21,6 +21,7 @@ interface Organization {
   employee_count: number | null
   website: string | null
   company_number: string | null
+  morning_id: string | null
   general_info: string | null
   created_at: string
 }
@@ -60,6 +61,7 @@ export default function OrganizationDetailsPage() {
 
   const [showContactModal, setShowContactModal] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', email: '', mobile: '' })
+  const [isEnriching, setIsEnriching] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -198,6 +200,45 @@ export default function OrganizationDetailsPage() {
     }
   }
 
+  const handleAIEnrich = async () => {
+    if (!org) return
+    setIsEnriching(true)
+    try {
+      const res = await fetch('/api/ai/enrich-organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          orgId: org.id,
+          orgName: org.name,
+          currentInfo: {
+            industry: org.industry,
+            website: org.website,
+            employee_count: org.employee_count,
+            general_info: org.general_info
+          }
+        })
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to enrich info')
+      
+      const updates = data.updates
+      
+      // Update DB with the new values
+      const { error: dbError } = await (supabase.from('organizations') as any).update(updates).eq('id', org.id)
+      
+      if (dbError) throw dbError
+
+      // Update UI with new data
+      setOrg(prev => prev ? { ...prev, ...updates } : null)
+      alert('המידע נמצא ועודכן בהצלחה באמצעות AI!')
+    } catch (err: any) {
+      alert(`שגיאה בחיפוש AI: ${err.message}`)
+    } finally {
+      setIsEnriching(false)
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 100 }}>
@@ -241,7 +282,9 @@ export default function OrganizationDetailsPage() {
                 <BuildingIcon />
               </div>
               <div>
-                <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0 }}>{org.name}</h1>
+                <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0 }}>
+                  <EditableTitle value={org.name} onSave={(val) => updateOrgField('name', val)} />
+                </h1>
                 <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 14, color: 'rgba(255,255,255,0.9)' }}>
                   {org.industry && <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BriefcaseIcon /> {org.industry}</span>}
                   {org.website && (
@@ -408,6 +451,14 @@ export default function OrganizationDetailsPage() {
                   placeholder="לדוגמה: תעשייה אווירית בע״מ"
                   onSave={(val) => updateOrgField('invoice_company_name', val)}
                 />
+                
+                <InlineEditableField
+                  label="מורנינג ID (מזהה לקוח)"
+                  value={org.morning_id}
+                  placeholder="חיבור למערכת הנהלת חשבונות"
+                  dir="ltr"
+                  onSave={(val) => updateOrgField('morning_id', val)}
+                />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <InlineEditableField
@@ -466,6 +517,38 @@ export default function OrganizationDetailsPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-light)' }}>
+                  <button 
+                    onClick={handleAIEnrich}
+                    disabled={isEnriching}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      cursor: isEnriching ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 10,
+                      boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)',
+                      opacity: isEnriching ? 0.7 : 1,
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={e => !isEnriching && (e.currentTarget.style.transform = 'translateY(-1px)')}
+                    onMouseOut={e => !isEnriching && (e.currentTarget.style.transform = 'translateY(0)')}
+                  >
+                    {isEnriching ? (
+                      <span className="spinner" style={{ width: 16, height: 16, borderTopColor: 'white' }} />
+                    ) : '✨ חפש מידע עם AI'}
+                  </button>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+                    ה-AI יחפש מידע על החברה ברשת ויעדכן את השדות החסרים
+                  </p>
                 </div>
               </div>
             </div>
@@ -639,6 +722,50 @@ export default function OrganizationDetailsPage() {
         </div>
       )}
     </>
+  )
+}
+function EditableTitle({ value, onSave }: { value: string, onSave: (val: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value)
+
+  if (editing) {
+    return (
+      <input 
+        autoFocus
+        style={{ 
+          background: 'rgba(255,255,255,0.1)', 
+          border: '1px solid rgba(255,255,255,0.4)', 
+          color: 'white', 
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          fontFamily: 'inherit',
+          padding: '2px 8px',
+          borderRadius: 6,
+          outline: 'none',
+          width: '100%'
+        }}
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false)
+          if (val.trim() && val !== value) onSave(val.trim())
+          else setVal(value)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+      />
+    )
+  }
+
+  return (
+    <span 
+      onClick={() => setEditing(true)} 
+      style={{ cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.4)', paddingBottom: 2 }}
+      title="לחץ לעריכה"
+    >
+      {value}
+    </span>
   )
 }
 

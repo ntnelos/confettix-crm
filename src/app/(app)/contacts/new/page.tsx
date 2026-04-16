@@ -17,34 +17,55 @@ export default function NewContactPage() {
     mobile: '',
     phone: '',
     organization_id: '',
-    notes: '',
   })
   
-  const [showOrgModal, setShowOrgModal] = useState(false)
+  const [showOrgSearchModal, setShowOrgSearchModal] = useState(false)
+  const [orgSearchQuery, setOrgSearchQuery] = useState('')
+  const [isSearchingOrgs, setIsSearchingOrgs] = useState(false)
+  const [selectedOrgName, setSelectedOrgName] = useState('')
   const [newOrgName, setNewOrgName] = useState('')
 
+  // Debounced search for organizations
   useEffect(() => {
-    async function loadOrgs() {
-      const { data } = await supabase.from('organizations').select('id, name').order('name')
+    const timer = setTimeout(async () => {
+      if (!showOrgSearchModal) return
+      
+      setIsSearchingOrgs(true)
+      const query = supabase.from('organizations').select('id, name')
+      
+      if (orgSearchQuery.trim()) {
+        query.ilike('name', `%${orgSearchQuery.trim()}%`)
+      }
+      
+      const { data } = await query.order('name').limit(20)
       if (data) setOrganizations(data)
-    }
-    loadOrgs()
-  }, [supabase])
+      setIsSearchingOrgs(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [orgSearchQuery, showOrgSearchModal, supabase])
 
   const set = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }))
 
   const handleCreateOrg = async () => {
-    if (!newOrgName.trim()) return
-    const { data, error } = await (supabase.from('organizations') as any).insert({ name: newOrgName.trim() }).select().single()
+    if (!orgSearchQuery.trim()) return
+    const { data, error } = await (supabase.from('organizations') as any).insert({ name: orgSearchQuery.trim() }).select().single()
     if (data) {
-      setOrganizations(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(prev => ({ ...prev, organization_id: data.id }))
-      setShowOrgModal(false)
-      setNewOrgName('')
+      setSelectedOrgName(data.name)
+      setShowOrgSearchModal(false)
+      setOrgSearchQuery('')
     } else if (error) {
       alert(`שגיאה ביצירת ארגון: ${error.message}`)
     }
+  }
+
+  const handleSelectOrg = (id: string, name: string) => {
+    setForm(prev => ({ ...prev, organization_id: id }))
+    setSelectedOrgName(name)
+    setShowOrgSearchModal(false)
+    setOrgSearchQuery('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,26 +164,37 @@ export default function NewContactPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ margin: 0 }}>שיוך לארגון (אופציונלי)</label>
+                <label>שיוך לארגון (אופציונלי)</label>
+                {form.organization_id ? (
+                  <div style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                    padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' 
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <BuildingIcon />
+                      <span style={{ fontWeight: 600 }}>{selectedOrgName}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => { setForm(prev => ({ ...prev, organization_id: '' })); setSelectedOrgName('') }}
+                      style={{ background: 'none', border: 'none', color: 'var(--pink)', cursor: 'pointer', padding: 4 }}
+                    >
+                      ביטול שיוך
+                    </button>
+                  </div>
+                ) : (
                   <button 
-                    type="button" 
-                    onClick={() => setShowOrgModal(true)}
-                    style={{ background: 'none', border: 'none', color: 'var(--pink)', fontSize: 12, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                    type="button"
+                    onClick={() => setShowOrgSearchModal(true)}
+                    style={{ 
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10, 
+                      padding: '10px 14px', background: 'white', borderRadius: 8, border: '1px dashed var(--border-strong)',
+                      color: 'var(--text-muted)', cursor: 'pointer', textAlign: 'right'
+                    }}
                   >
-                    + הוסף ארגון חדש
+                    <PlusIcon /> לחץ לחיפוש ושיוך ארגון
                   </button>
-                </div>
-                <select
-                  className="form-select"
-                  value={form.organization_id}
-                  onChange={e => set('organization_id', e.target.value)}
-                >
-                  <option value="">— ללא שיוך —</option>
-                  {organizations.map(org => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </select>
+                )}
               </div>
               <div className="form-group">
                 <label>טלפון קווי עבודה / אחר</label>
@@ -202,33 +234,83 @@ export default function NewContactPage() {
         </div>
       </div>
 
-      {showOrgModal && (
+      {showOrgSearchModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="card" style={{ padding: 24, minWidth: 400, maxWidth: '90%', background: 'var(--surface)' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>יצירת ארגון חדש</h3>
-            <div className="form-group">
-              <label>שם מלא של הארגון/חברה <span style={{ color: 'var(--pink)' }}>*</span></label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>חיפוש או שיוך לארגון</h3>
+              <button className="btn-icon" onClick={() => setShowOrgSearchModal(false)}>
+                <XIcon />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <input 
                 autoFocus
                 className="form-input" 
-                value={newOrgName} 
-                onChange={e => setNewOrgName(e.target.value)} 
-                placeholder="למשל: סיילספורס ישראל" 
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleCreateOrg()
-                  }
-                }}
+                value={orgSearchQuery} 
+                onChange={e => setOrgSearchQuery(e.target.value)} 
+                placeholder="הקלד שם ארגון לחיפוש..." 
               />
-            </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowOrgModal(false)}>ביטול</button>
-              <button type="button" className="btn btn-primary" onClick={handleCreateOrg}>צור ארגון</button>
+
+              {orgSearchQuery.trim() && !organizations.some(o => o.name === orgSearchQuery.trim()) && (
+                <button 
+                  onClick={handleCreateOrg}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: 8, padding: 12, background: 'rgba(230,0,126,0.1)', 
+                    border: '1px dashed var(--pink)', color: 'var(--pink)', borderRadius: 8, cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  <PlusIcon /> יצירת ארגון חדש בשם: &quot;{orgSearchQuery}&quot;
+                </button>
+              )}
+
+              <div style={{ maxHeight: 250, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, minHeight: 100 }}>
+                {isSearchingOrgs ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                    <span className="spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--pink)' }} />
+                  </div>
+                ) : organizations.length > 0 ? organizations.map(org => (
+                  <div 
+                    key={org.id} 
+                    onClick={() => handleSelectOrg(org.id, org.name)}
+                    style={{ 
+                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', 
+                      borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' 
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <BuildingIcon />
+                    {org.name}
+                  </div>
+                )) : (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
+                    לא נמצאו תוצאות.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
     </>
   )
+}
+
+function BuildingIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+      <path d="M9 22v-4h6v4"></path>
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+}
+
+function XIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 }

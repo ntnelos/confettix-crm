@@ -1,23 +1,41 @@
 'use client'
 
 import React, { Suspense, useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
-function NewOpportunityForm() {
+function NewOpportunityFormImpl() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isMounted, setIsMounted] = useState(false)
+  
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   const [organizations, setOrganizations] = useState<{id: string, name: string}[]>([])
   const [contacts, setContacts] = useState<{id: string, name: string}[]>([])
   
+  // Explicit names for display
+  const [selectedContactName, setSelectedContactName] = useState('')
+  const [selectedOrgName, setSelectedOrgName] = useState('')
+
   // Organization modal state
   const [showOrgModal, setShowOrgModal] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
+  
+  // Contact search modal state
+  const [showContactSelectModal, setShowContactSelectModal] = useState(false)
+  const [contactSearchQuery, setContactSearchQuery] = useState('')
+
+  // Org search modal state
+  const [showOrgSelectModal, setShowOrgSelectModal] = useState(false)
+  const [orgSearchQuery, setOrgSearchQuery] = useState('')
   
   // Contact modal state
   const [showContactModal, setShowContactModal] = useState(false)
@@ -34,18 +52,145 @@ function NewOpportunityForm() {
     expected_delivery: '',
   })
 
-  // Load Orgs and Contacts
+  // Initial load of latest items (small batch)
   useEffect(() => {
-    async function loadData() {
+    async function loadInitial() {
       const [{ data: orgs }, { data: conts }] = await Promise.all([
-        supabase.from('organizations').select('id, name').order('name'),
-        supabase.from('contacts').select('id, name').order('name')
+        supabase.from('organizations').select('id, name').order('name').limit(20),
+        supabase.from('contacts').select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
       ])
       if (orgs) setOrganizations(orgs)
-      if (conts) setContacts(conts)
+      if (conts) setContacts(conts as any)
     }
-    loadData()
+    loadInitial()
   }, [supabase])
+
+  // Server-side Contact Search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!contactSearchQuery.trim()) {
+        // Restore initial if cleared
+        const { data } = await supabase.from('contacts').select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
+        if (data) setContacts(data as any)
+        return
+      }
+      
+      const q = contactSearchQuery.trim()
+      
+      // 1. Find matching organizations
+      const { data: matchedOrgs } = await supabase.from('organizations').select('id').ilike('name', `%${q}%`)
+      const orgIds = matchedOrgs?.map(o => o.id) || []
+      
+      // 2. Build explicit OR query
+      let orQuery = `name.ilike.%${q}%,email.ilike.%${q}%,mobile.ilike.%${q}%`
+      if (orgIds.length > 0) {
+        orQuery += `,organization_id.in.(${orgIds.join(',')})`
+      }
+      
+      const { data } = await supabase
+        .from('contacts')
+        .select('id, name, email, mobile, organization_id, organizations(name)')
+        .or(orQuery)
+        .limit(50)
+      
+      if (data) setContacts(data as any)
+    }, 400)
+    
+    return () => clearTimeout(timer)
+  }, [contactSearchQuery, supabase])
+
+  // Server-side Org Search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!orgSearchQuery.trim()) {
+        const { data } = await supabase.from('organizations').select('id, name').order('name').limit(20)
+        if (data) setOrganizations(data)
+        return
+      }
+      
+      const { data } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .ilike('name', `%${orgSearchQuery.trim()}%`)
+        .limit(50)
+      
+      if (data) setOrganizations(data)
+    }, 400)
+    
+    return () => clearTimeout(timer)
+  }, [orgSearchQuery, supabase])
+
+  // Sync explicitly from searchParams to guarantee we have their names even if outside the 2000 limit   // Parse url params for pre-population or edit mode
+  useEffect(() => {
+    const cId = searchParams.get('contact_id')
+    const oId = searchParams.get('organization_id')
+    const editId = searchParams.get('edit_id')
+    
+    // Attempt Edit Mode Init
+    if (editId) {
+      const loadEditedOpp = async () => {
+        const { data, error } = await supabase.from('opportunities').select('*, contacts(name), organizations(name)').eq('id', editId).single()
+        if (data) {
+          setForm({
+            subject: data.subject || '',
+            status: data.status || 'new',
+            contact_id: data.contact_id || '',
+            organization_id: data.organization_id || '',
+            calculated_value: data.calculated_value?.toString() || '',
+            lead_source: data.lead_source || '',
+            description: data.description || '',
+            expected_delivery: data.expected_delivery || '',
+          })
+          if (data.contacts?.name) setSelectedContactName(data.contacts.name)
+          if (data.organizations?.name) setSelectedOrgName(data.organizations.name)
+        }
+      }
+      loadEditedOpp()
+      return // skip standard init
+    }
+
+    const initSelection = async () => {
+      let resolvedOrgId = oId
+      
+      if (cId) {
+        const { data: c } = await supabase.from('contacts').select('id, name, organization_id, organizations(name)').eq('id', cId).single()
+        if (c) {
+          setSelectedContactName(c.name)
+          if (c.organization_id && c.organizations) {
+            resolvedOrgId = c.organization_id
+            setSelectedOrgName(c.organizations.name)
+          }
+        }
+      }
+      
+      if (resolvedOrgId && !selectedOrgName) {
+         const { data: o } = await supabase.from('organizations').select('id, name').eq('id', resolvedOrgId).single()
+         if (o) setSelectedOrgName(o.name)
+      }
+
+      setForm(prev => ({ 
+         ...prev, 
+         contact_id: cId || prev.contact_id, 
+         organization_id: resolvedOrgId || prev.organization_id
+       }))
+    }
+    
+    if (cId || oId) {
+       initSelection()
+    }
+  }, [searchParams, supabase])
+  
+  // Update name displays if missing and available in local list
+  useEffect(() => {
+     if (form.contact_id && !selectedContactName && contacts.length > 0) {
+        const c = contacts.find(c => String(c.id) === String(form.contact_id))
+        if (c) setSelectedContactName(c.name)
+     }
+     if (form.organization_id && !selectedOrgName && organizations.length > 0) {
+        const o = organizations.find(o => String(o.id) === String(form.organization_id))
+        if (o) setSelectedOrgName(o.name)
+     }
+  }, [form.contact_id, form.organization_id, contacts, organizations, selectedContactName, selectedOrgName])
 
   const set = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }))
@@ -56,6 +201,7 @@ function NewOpportunityForm() {
     if (data) {
       setOrganizations(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(prev => ({ ...prev, organization_id: data.id }))
+      setSelectedOrgName(data.name)
       setShowOrgModal(false)
       setNewOrgName('')
     } else if (error) {
@@ -73,6 +219,7 @@ function NewOpportunityForm() {
     if (data) {
       setContacts(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setForm(prev => ({ ...prev, contact_id: data.id }))
+      setSelectedContactName(data.name)
       setShowContactModal(false)
       setNewContactName('')
     } else if (error) {
@@ -94,7 +241,9 @@ function NewOpportunityForm() {
     setLoading(true)
     setError('')
 
-    const { error: sbError } = await (supabase.from('opportunities') as any).insert({
+    const editId = searchParams.get('edit_id')
+
+    const oppPayload = {
       subject: form.subject.trim(),
       status: form.status,
       contact_id: form.contact_id,
@@ -103,7 +252,17 @@ function NewOpportunityForm() {
       lead_source: form.lead_source || null,
       description: form.description || null,
       expected_delivery: form.expected_delivery || null,
-    })
+    }
+
+    let sbError;
+
+    if (editId) {
+      const { error } = await (supabase.from('opportunities') as any).update(oppPayload).eq('id', editId)
+      sbError = error
+    } else {
+      const { error } = await (supabase.from('opportunities') as any).insert(oppPayload)
+      sbError = error
+    }
 
     if (sbError) {
       setError(sbError.message)
@@ -111,7 +270,15 @@ function NewOpportunityForm() {
       return
     }
 
-    router.push('/opportunities')
+    router.push(editId ? `/opportunities/${editId}` : '/opportunities')
+  }
+
+  if (!isMounted) {
+    return (
+      <div style={{ padding: 100, textAlign: 'center' }}>
+        <span className="spinner" style={{ width: 40, height: 40, borderTopColor: 'var(--pink)' }} />
+      </div>
+    )
   }
 
   return (
@@ -131,10 +298,10 @@ function NewOpportunityForm() {
               <span className="breadcrumb-sep">/</span>
               <Link href="/opportunities">הזדמנויות</Link>
               <span className="breadcrumb-sep">/</span>
-              <span>הזדמנות חדשה</span>
+              <span>{searchParams.get('edit_id') ? 'עריכת הזדמנות' : 'הזדמנות חדשה'}</span>
             </div>
-            <h1 className="page-title">פתיחת הזדמנות חדשה</h1>
-            <p className="page-subtitle">הזן את פרטי העסקה והלקוח הרלוונטי</p>
+            <h1 className="page-title">{searchParams.get('edit_id') ? 'עריכת פרטי הזדמנות' : 'פתיחת הזדמנות חדשה'}</h1>
+            <p className="page-subtitle">{searchParams.get('edit_id') ? 'עדכן את פרטי העסקה והלקוח ושמור שינויים' : 'הזן את פרטי העסקה והלקוח הרלוונטי'}</p>
           </div>
         </div>
 
@@ -172,17 +339,12 @@ function NewOpportunityForm() {
                         + איש קשר חדש
                       </button>
                     </div>
-                    <select
-                      className="form-select"
-                      value={form.contact_id}
-                      onChange={e => set('contact_id', e.target.value)}
-                      style={{ marginTop: 4 }}
+                    <div 
+                      onClick={() => setShowContactSelectModal(true)}
+                      style={{ marginTop: 4, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', minHeight: 44, display: 'flex', alignItems: 'center', color: form.contact_id ? 'var(--text-primary)' : 'var(--text-muted)' }}
                     >
-                      <option value="">— בחר איש קשר —</option>
-                      {contacts.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                      {form.contact_id && selectedContactName ? selectedContactName : '— לחץ לחיפוש איש קשר —'}
+                    </div>
                   </div>
 
                   <div className="form-group" style={{ marginTop: 12 }}>
@@ -196,17 +358,12 @@ function NewOpportunityForm() {
                         + ארגון חדש
                       </button>
                     </div>
-                    <select
-                      className="form-select"
-                      value={form.organization_id}
-                      onChange={e => set('organization_id', e.target.value)}
-                      style={{ marginTop: 4 }}
+                    <div 
+                      onClick={() => setShowOrgSelectModal(true)}
+                      style={{ marginTop: 4, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', minHeight: 44, display: 'flex', alignItems: 'center', color: form.organization_id ? 'var(--text-primary)' : 'var(--text-muted)' }}
                     >
-                      <option value="">— לקוח פרטי / בחר ארגון —</option>
-                      {organizations.map(org => (
-                        <option key={org.id} value={org.id}>{org.name}</option>
-                      ))}
-                    </select>
+                      {form.organization_id && selectedOrgName ? selectedOrgName : '— לקוח פרטי / לחץ לבחירת ארגון —'}
+                    </div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                       * אם מדובר בלקוח פרטי, השאר שדה זה ריק.
                     </div>
@@ -298,7 +455,7 @@ function NewOpportunityForm() {
               <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? (
                   <span className="spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
-                ) : 'צור הזדמנות'}
+                ) : searchParams.get('edit_id') ? 'שמור שינויים' : 'צור הזדמנות'}
               </button>
             </div>
           </form>
@@ -360,9 +517,123 @@ function NewOpportunityForm() {
           </div>
         </div>
       )}
+      {/* Search Modals */}
+      {showContactSelectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh' }}>
+          <div className="card" style={{ padding: 24, width: '90%', maxWidth: 700, maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: '#ffffff', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+               <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>בחירת איש קשר</h3>
+               <button onClick={() => setShowContactSelectModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24 }}>×</button>
+            </div>
+            <input 
+              autoFocus
+              className="form-input" 
+              placeholder="חפש לפי שם, מייל, טלפון, או ארגון..." 
+              value={contactSearchQuery}
+              onChange={e => setContactSearchQuery(e.target.value)}
+              style={{ marginBottom: 16 }}
+            />
+            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid var(--border)', borderRadius: 8 }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead style={{ background: 'var(--surface)' }}>
+                     <tr>
+                        <th style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid var(--border)' }}>שם</th>
+                        <th style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid var(--border)' }}>אימייל</th>
+                        <th style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid var(--border)' }}>נייד</th>
+                        <th style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid var(--border)' }}>ארגון</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {contacts.map((c: any) => (
+                        <tr 
+                          key={c.id} 
+                          onClick={() => {
+                             set('contact_id', c.id)
+                             setSelectedContactName(c.name)
+                             if (c.organization_id && !form.organization_id) {
+                               set('organization_id', c.organization_id)
+                               setSelectedOrgName(c.organizations?.name || '')
+                             }
+                             setShowContactSelectModal(false)
+                             setContactSearchQuery('')
+                          }}
+                          style={{ cursor: 'pointer', borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--surface)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                           <td style={{ padding: 12, fontWeight: 600, color: 'var(--pink)' }}>{c.name}</td>
+                           <td style={{ padding: 12 }}>{c.email || '-'}</td>
+                           <td style={{ padding: 12 }}>{c.mobile || '-'}</td>
+                           <td style={{ padding: 12 }}>{c.organizations?.name ? <span className="badge badge-gray">{c.organizations.name}</span> : '-'}</td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOrgSelectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '10vh' }}>
+          <div className="card" style={{ padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: '#ffffff', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+               <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>בחירת ארגון משוייך</h3>
+               <button onClick={() => { setShowOrgSelectModal(false); set('organization_id', ''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>נקה בחירה</button>
+            </div>
+            <input 
+              autoFocus
+              className="form-input" 
+              placeholder="חפש ארגון..." 
+              value={orgSearchQuery}
+              onChange={e => setOrgSearchQuery(e.target.value)}
+              style={{ marginBottom: 16 }}
+            />
+            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid var(--border)', borderRadius: 8 }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead style={{ background: 'var(--surface)' }}>
+                     <tr>
+                        <th style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid var(--border)' }}>שם הארגון</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr onClick={() => { set('organization_id', ''); setSelectedOrgName(''); setShowOrgSelectModal(false); }} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: 12, fontStyle: 'italic', color: 'var(--text-muted)' }}>— ללא ארגון (לקוח פרטי) —</td>
+                     </tr>
+                     {organizations.map(o => (
+                        <tr 
+                          key={o.id} 
+                          onClick={() => {
+                             set('organization_id', o.id)
+                             setSelectedOrgName(o.name)
+                             setShowOrgSelectModal(false)
+                             setOrgSearchQuery('')
+                          }}
+                          style={{ cursor: 'pointer', borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--surface)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                           <td style={{ padding: 12, fontWeight: 600 }}>{o.name}</td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
+
+const NewOpportunityForm = dynamic(() => Promise.resolve(NewOpportunityFormImpl), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: 100, textAlign: 'center' }}>
+      <span className="spinner" style={{ width: 40, height: 40, borderTopColor: 'var(--pink)' }} />
+    </div>
+  )
+})
 
 export default function NewOpportunityPage() {
   return (

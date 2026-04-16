@@ -147,7 +147,7 @@ export type Database = {
           id: string
           reference_number: string | null
           subject: string
-          status: 'new' | 'followup' | 'won' | 'lost'
+          status: 'new' | 'followup' | 'won' | 'lost' | 'pending_payment' | 'paid'
           payment_method: string | null
           contact_id: string | null
           organization_id: string | null
@@ -164,7 +164,7 @@ export type Database = {
           id?: string
           reference_number?: string | null
           subject: string
-          status?: 'new' | 'followup' | 'won' | 'lost'
+          status?: 'new' | 'followup' | 'won' | 'lost' | 'pending_payment' | 'paid'
           payment_method?: string | null
           contact_id?: string | null
           organization_id?: string | null
@@ -177,7 +177,7 @@ export type Database = {
         }
         Update: {
           subject?: string
-          status?: 'new' | 'followup' | 'won' | 'lost'
+          status?: 'new' | 'followup' | 'won' | 'lost' | 'pending_payment' | 'paid'
           payment_method?: string | null
           contact_id?: string | null
           organization_id?: string | null

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
+import GlobalSearchModal from '../GlobalSearchModal'
 
 const navItems = [
   { href: '/dashboard', label: 'לוח בקרה', icon: GridIcon },
@@ -22,6 +23,7 @@ export default function Sidebar() {
   const supabase = createClient()
   const [userName, setUserName] = useState('')
   const [userInitial, setUserInitial] = useState('?')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -31,6 +33,17 @@ export default function Sidebar() {
         setUserInitial(name.charAt(0).toUpperCase())
       }
     })
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const handleLogout = async () => {
@@ -58,6 +71,25 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
+        <button 
+          onClick={() => setSearchOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+            background: 'var(--body-bg)', border: '1px solid var(--border)', borderRadius: '8px',
+            color: 'var(--text-secondary)', fontWeight: 500, fontSize: '14px', cursor: 'pointer',
+            marginBottom: '16px', width: '100%', outline: 'none', transition: 'box-shadow 0.2s',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+          }}
+          className="search-btn-hover"
+        >
+          <SearchIcon />
+          <span>חיפוש מהיר...</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>⌘</span>
+            <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>K</span>
+          </div>
+        </button>
+
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
@@ -88,6 +120,13 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+      <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <style dangerouslySetInnerHTML={{__html: `
+        .search-btn-hover:hover {
+          border-color: var(--pink) !important;
+          color: var(--pink) !important;
+        }
+      `}} />
     </aside>
   )
 }
@@ -101,6 +140,15 @@ function GridIcon() {
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 18, height: 18 }}>
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
   )
 }

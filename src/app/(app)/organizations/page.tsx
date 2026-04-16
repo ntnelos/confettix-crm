@@ -19,15 +19,18 @@ interface Organization {
 export default function OrganizationsPage() {
   const supabase = createClient()
   const [orgs, setOrgs] = useState<Organization[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   const fetchOrgs = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('organizations')
-      .select('*, contacts(count)')
+      .select('*, contacts(count)', { count: 'exact' })
       .order('created_at', { ascending: false })
+
+    if (count !== null) setTotalCount(count)
 
     if (!error && data) {
       const mapped = data.map((o: Organization & { contacts: { count: number }[] }) => ({
@@ -53,7 +56,7 @@ export default function OrganizationsPage() {
 
   const handleDeleteOrg = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את הארגון "${name}" לצמיתות?`)) return
-    
+
     const { error } = await (supabase.from('organizations') as any).delete().eq('id', id)
     if (!error) {
       setOrgs(prev => prev.filter(o => o.id !== id))
@@ -118,8 +121,11 @@ export default function OrganizationsPage() {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
-              <div className="text-muted">
-                {filtered.length === 0 ? 'לא נמצאו תוצאות' : `סה"כ ${filtered.length} ארגונים`}
+              <div className="text-muted" style={{ fontSize: 13 }}>
+                {search
+                  ? `${filtered.length} תוצאות מתוך ${totalCount} ארגונים`
+                  : `סה"כ ${totalCount} ארגונים`
+                }
               </div>
             </div>
 
@@ -191,8 +197,11 @@ export default function OrganizationsPage() {
             </table>
 
             <div className="table-pagination">
-              <div className="pagination-info">
-                מציג {filtered.length} מתוך {orgs.length} ארגונים
+              <div className="text-muted" style={{ fontSize: 13 }}>
+                {search
+                  ? `${filtered.length} תוצאות מתוך ${totalCount} ארגונים`
+                  : `סה"כ ${totalCount} ארגונים`
+                }
               </div>
             </div>
           </div>

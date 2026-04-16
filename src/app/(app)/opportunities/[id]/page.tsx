@@ -47,59 +47,70 @@ export default function OpportunityDetailsPage() {
   // Invoice State
   const [invoice, setInvoice] = useState<any>(null)
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [existingInvoiceUrl, setExistingInvoiceUrl] = useState('')
+  const [existingInvoiceNumber, setExistingInvoiceNumber] = useState('')
   
   // New Update Form
   const [newUpdate, setNewUpdate] = useState({ content: '', type: 'note' as any })
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false)
 
-  useEffect(() => {
-    async function loadData() {
-      const { data: oppData, error: oppErr } = await supabase
-        .from('opportunities')
-        .select('*, contacts(id,name), organizations(id,name)')
-        .eq('id', id)
-        .single()
-      
-      if (oppErr || !oppData) {
-        console.error("Opp not found! ID attempted:", id);
-        console.error("Error from Supabase:", oppErr);
-        setLoading(false);
-        return;
-      }
-      
-      setOpp(oppData as Opportunity)
-      
-      const { data: updatesData } = await supabase
-        .from('opportunity_updates')
-        .select('*')
-        .eq('opportunity_id', id)
-        .order('created_at', { ascending: false })
-      
-      if (updatesData) setUpdates(updatesData as UpdateRecord[])
-
-      const { data: orderData } = await supabase.from('orders')
-        .select('*, quotes(quote_number), invoices(*)')
-        .eq('opportunity_id', id)
-        .eq('status', 'signed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-      
-      if (orderData) {
-        setSignedOrder(orderData)
-        const typedOrder = orderData as any
-        if (typedOrder.invoices && typedOrder.invoices.length > 0) {
-          setInvoice(typedOrder.invoices[0])
-        }
-        if (typedOrder.delivery_address_id) {
-          const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', typedOrder.delivery_address_id).single()
-          if (addr) setDeliveryAddress(addr)
-        }
-      }
-      
+  const loadData = async () => {
+    const { data: oppData, error: oppErr } = await supabase
+      .from('opportunities')
+      .select('*, contacts(id,name), organizations(id,name)')
+      .eq('id', id)
+      .single()
+    
+    if (oppErr || !oppData) {
+      console.error("Opp not found! ID attempted:", id);
+      console.error("Error from Supabase:", oppErr);
       setLoading(false);
+      return;
     }
+    
+    setOpp(oppData as Opportunity)
+    
+    const { data: updatesData } = await supabase
+      .from('opportunity_updates')
+      .select('*')
+      .eq('opportunity_id', id)
+      .order('created_at', { ascending: false })
+    
+    if (updatesData) setUpdates(updatesData as UpdateRecord[])
 
+    const { data: orderData } = await supabase.from('orders')
+      .select('*, quotes(quote_number), invoices(*)')
+      .eq('opportunity_id', id)
+      .neq('status', 'cancelled')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (orderData) {
+      setSignedOrder(orderData)
+      const typedOrder = orderData as any
+      if (typedOrder.invoices && typedOrder.invoices.length > 0) {
+        setInvoice(typedOrder.invoices[0])
+      } else {
+        setInvoice(null) // Reset if no invoices
+      }
+      if (typedOrder.delivery_address_id) {
+        const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', typedOrder.delivery_address_id).single()
+        if (addr) setDeliveryAddress(addr)
+      } else {
+        setDeliveryAddress(null)
+      }
+    } else {
+      setSignedOrder(null)
+      setInvoice(null)
+      setDeliveryAddress(null)
+    }
+    
+    setLoading(false);
+  }
+
+  useEffect(() => {
     if (id) {
       loadData();
     }
@@ -166,8 +177,35 @@ export default function OpportunityDetailsPage() {
       
       setInvoice(data.invoice)
       alert('חשבונית מס הופקה בהצלחה!')
+      setShowInvoiceModal(false)
     } catch (err: any) {
       alert(`שגיאה בהפקת החשבונית: ${err.message}`)
+    } finally {
+      setIsGeneratingInvoice(false)
+    }
+  }
+
+  const handleAttachExistingInvoice = async () => {
+    if (!signedOrder || !existingInvoiceUrl) return
+    setIsGeneratingInvoice(true)
+    try {
+      const { data, error } = await (supabase.from('invoices') as any).insert({
+        order_id: signedOrder.id,
+        pdf_url: existingInvoiceUrl,
+        invoice_number: existingInvoiceNumber || 'חשבונית חיצונית',
+        type: 'invoice',
+        amount: signedOrder.total_amount,
+        status: 'issued',
+        issued_at: new Date().toISOString()
+      }).select().single()
+
+      if (error) throw error
+      
+      setInvoice(data)
+      setShowInvoiceModal(false)
+      alert('החשבונית קושרה בהצלחה!')
+    } catch (err: any) {
+      alert(`שגיאה בקישור חשבונית: ${err.message}`)
     } finally {
       setIsGeneratingInvoice(false)
     }
@@ -270,7 +308,9 @@ export default function OpportunityDetailsPage() {
           {[
             { id: 'new', label: 'חדש/נוצר' },
             { id: 'followup', label: 'פולואפ / בטיפול' },
-            { id: 'won', label: 'זכייה / שולם / מאושר' },
+            { id: 'won', label: 'זכייה / מאושר' },
+            { id: 'pending_payment', label: 'ממתין לתשלום' },
+            { id: 'paid', label: 'שולם' },
             { id: 'lost', label: 'לא נסגר / בוטל' }
           ].map((step, idx, arr) => {
              const activeIndex = arr.findIndex(s => s.id === opp.status)
@@ -341,7 +381,7 @@ export default function OpportunityDetailsPage() {
 
             {/* Quotes Builder */}
             <div className="card" style={{ overflow: 'visible' }}>
-               <QuotesManager opportunityId={opp.id} />
+               <QuotesManager opportunityId={opp.id} onOrderUpdated={loadData} />
             </div>
 
             {/* Updates / History Card */}
@@ -462,19 +502,30 @@ export default function OpportunityDetailsPage() {
                 </div>
                 
                 <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed var(--border-strong)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>שיוך נתונים לקוח</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>שיוך נתונים לקוח</div>
+                    <Link href={`/opportunities/new?edit_id=${opp.id}`} style={{ fontSize: 11, color: 'var(--pink)', textDecoration: 'none', fontWeight: 600 }}>עריכה ✎</Link>
+                  </div>
                   
                   {opp.contact_id && opp.contacts ? (
                     <Link href={`/contacts/${opp.contact_id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', border: '1px solid var(--border)', marginBottom: 8, transition: 'all 0.2s' }}>
                       <div style={{ color: 'var(--pink)', display: 'flex' }}><UserIconSmall /></div>
                       <span style={{ fontWeight: 500, fontSize: 13, flex: 1 }}>{opp.contacts.name}</span>
                     </Link>
-                  ) : <div style={{ fontSize: 13, color: 'var(--pink)' }}>חסר איש קשר!</div>}
+                  ) : (
+                    <Link href={`/opportunities/new?edit_id=${opp.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 14px', background: 'var(--surface)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', border: '1px dashed var(--border)', marginBottom: 8, fontSize: 13, fontWeight: 500 }}>
+                      + שיוך איש קשר
+                    </Link>
+                  )}
 
-                  {opp.organization_id && opp.organizations && (
+                  {opp.organization_id && opp.organizations ? (
                     <Link href={`/organizations/${opp.organization_id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', border: '1px solid var(--border)', transition: 'all 0.2s' }}>
                       <div style={{ color: 'var(--blue, #0d6efd)', display: 'flex' }}><BuildingIconSmall /></div>
                       <span style={{ fontWeight: 500, fontSize: 13, flex: 1 }}>{opp.organizations.name}</span>
+                    </Link>
+                  ) : (
+                    <Link href={`/opportunities/new?edit_id=${opp.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 14px', background: 'var(--surface)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', border: '1px dashed var(--border)', fontSize: 13, fontWeight: 500 }}>
+                      + שיוך ארגון
                     </Link>
                   )}
                 </div>
@@ -537,11 +588,10 @@ export default function OpportunityDetailsPage() {
                      </>
                    ) : (
                      <button
-                        onClick={handleGenerateInvoice}
-                        disabled={isGeneratingInvoice}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#3730A3', border: 'none', color: 'white', borderRadius: 8, cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', opacity: isGeneratingInvoice ? 0.7 : 1 }}
+                        onClick={() => setShowInvoiceModal(true)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#3730A3', border: 'none', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', width: '100%' }}
                      >
-                        📄 {isGeneratingInvoice ? 'מפיק חשבונית מורנינג...' : 'הפק חשבונית מס'}
+                        📄 חשבונית מס
                      </button>
                    )}
                 </div>
@@ -569,6 +619,73 @@ export default function OpportunityDetailsPage() {
 
         </div>
       </div>
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ padding: 32, minWidth: 460, maxWidth: '92%', background: 'var(--surface)', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6, textAlign: 'center' }}>📄 הפקת חשבונית מס</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>בחר כיצד לצרף חשבונית להזמנה זו</p>
+
+            {/* Option A: Generate via Morning */}
+            <div style={{ background: 'rgba(55,48,163,0.06)', border: '1px solid rgba(55,48,163,0.2)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <p style={{ fontWeight: 600, marginBottom: 4 }}>🤖 הפקה אוטומטית דרך מורנינג</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>תיווצר חשבונית מס חדשה ישירות במערכת מורנינג על פי פריטי ההזמנה</p>
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerateInvoice}
+                disabled={isGeneratingInvoice}
+                style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+              >
+                {isGeneratingInvoice ? <span className="spinner" style={{ width: 18, height: 18 }} /> : '📄 הפק חשבונית עכשיו'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>או קשר חשבונית קיימת</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            {/* Option B: Attach existing */}
+            <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label>קישור לקובץ PDF (URL)</label>
+                <input 
+                  className="form-input" 
+                  placeholder="https://..." 
+                  dir="ltr" 
+                  value={existingInvoiceUrl} 
+                  onChange={e => setExistingInvoiceUrl(e.target.value)} 
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label>מספר חשבונית (אופציונלי)</label>
+                <input 
+                  className="form-input" 
+                  placeholder="לדוגמה: 10024" 
+                  dir="ltr" 
+                  value={existingInvoiceNumber} 
+                  onChange={e => setExistingInvoiceNumber(e.target.value)} 
+                />
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={handleAttachExistingInvoice}
+                disabled={isGeneratingInvoice || !existingInvoiceUrl}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                {isGeneratingInvoice ? <span className="spinner" style={{ width: 18, height: 18 }} /> : '🔗 שמור חשבונית קיימת'}
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <button onClick={() => setShowInvoiceModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>ביטול</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -577,6 +694,8 @@ function StatusBadge({ status }: { status: string }) {
    if (status === 'new') return <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600, border: '1px solid white' }}>חדש/נוצר</span>
    if (status === 'followup') return <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600, border: '1px solid white' }}>בטיפול / פולואפ</span>
    if (status === 'won') return <span style={{ background: '#4caf50', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>זכייה / מאושר</span>
+   if (status === 'pending_payment') return <span style={{ background: '#3f51b5', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>ממתין לתשלום</span>
+   if (status === 'paid') return <span style={{ background: '#009688', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>שולם</span>
    if (status === 'lost') return <span style={{ background: '#e53935', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>לא נסגר / בוטל</span>
    return <span>{status}</span>
 }

@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
     // 1. Fetch Order and related data
     const { data: order, error: orderErr } = await supabase
       .from('orders')
-      .select('*, quotes(id, subtotal, shipping_cost, quotes_items(*)), opportunities(id, contact_id, organization_id)')
+      .select('*, quotes(id, subtotal, shipping_cost, quote_items(*)), opportunities(id, contact_id, organization_id)')
       .eq('id', orderId)
       .single()
 
     if (orderErr || !order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      return NextResponse.json({ error: `Order not found or query error: ${orderErr?.message}` }, { status: 404 })
     }
 
     const opportunity = order.opportunities
@@ -52,23 +52,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Morning API credentials not configured.' }, { status: 500 })
     }
 
-    const authRes = await fetch('https://api.greeninvoice.co.il/api/v1/account/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: apiKey, secret: apiSecret })
-    })
+    const apiUrl = process.env.MORNING_API_URL || 'https://api.greeninvoice.co.il/api/v1'
+
+    let authRes;
+    try {
+      authRes = await fetch(`${apiUrl}/account/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: apiKey, secret: apiSecret })
+      })
+    } catch (fetchErr: any) {
+      console.error('Morning Auth Network Error:', fetchErr)
+      return NextResponse.json({ error: `Network error connecting to Morning: ${fetchErr.message}` }, { status: 500 })
+    }
 
     if (!authRes.ok) {
       const err = await authRes.text()
       console.error('Morning Auth Error:', err)
-      return NextResponse.json({ error: 'Failed to authenticate with Morning API' }, { status: 500 })
+      return NextResponse.json({ error: `Morning Auth Error: ${err}` }, { status: 500 })
     }
 
     const authData = await authRes.json()
     const token = authData.token
 
     // 3. Smart Client Logic (Morning ID Check)
-    let morningId = contact.morning_id
+    let morningId: string | null = null;
+    let organizationData = null;
+
+    if (opportunity.organization_id) {
+      const { data: org } = await supabase.from('organizations').select('*').eq('id', opportunity.organization_id).single()
+      organizationData = org;
+      // Using existing morning_id column, assuming we'll fall back to contact logic if this fails, but wait, DB might not have morning_id on orgs.
+      // We will rely on contact's morning_id or organization's if available. To be safe, we'll store organization's morning_id in the 'notes' or a new column if exists.
+      morningId = org?.morning_id || contact.morning_id;
+    } else {
+      morningId = contact.morning_id;
+    }
 
     if (!morningId) {
       // Create new client in Morning
@@ -82,15 +101,12 @@ export async function POST(request: NextRequest) {
         clientPayload.phone = contact.mobile || contact.phone
       }
 
-      // Add organization name if available
-      if (opportunity.organization_id) {
-        const { data: org } = await supabase.from('organizations').select('name').eq('id', opportunity.organization_id).single()
-        if (org) {
-          clientPayload.name = `${org.name} - ${contact.name}`
-        }
+      // Smart Naming Logic
+      if (organizationData) {
+         clientPayload.name = organizationData.invoice_company_name || organizationData.name || contact.name;
       }
 
-      const clientRes = await fetch('https://api.greeninvoice.co.il/api/v1/clients', {
+      const clientRes = await fetch(`${apiUrl}/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,8 +124,19 @@ export async function POST(request: NextRequest) {
       const clientData = await clientRes.json()
       morningId = clientData.id
 
-      // Update contact in our DB
-      await supabase.from('contacts').update({ morning_id: morningId }).eq('id', contact.id)
+      // Update in our DB
+      if (organizationData && organizationData.id) {
+        // Try updating org morning_id if column exists, otherwise contact.
+        // We will just try safely.
+        const { error: orgErr } = await supabase.from('organizations').update({ morning_id: morningId }).eq('id', organizationData.id)
+        if (orgErr) console.warn("Non-critical: could not update org morning_id", orgErr.message)
+        
+        const { error: contactErr } = await supabase.from('contacts').update({ morning_id: morningId }).eq('id', contact.id)
+        if (contactErr) console.warn("Non-critical: could not update contact morning_id", contactErr.message)
+      } else {
+        const { error: contactErr } = await supabase.from('contacts').update({ morning_id: morningId }).eq('id', contact.id)
+        if (contactErr) console.warn("Non-critical: could not update contact morning_id", contactErr.message)
+      }
     }
 
     // 4. Document Creation (Type 305 - Tax Invoice)
@@ -121,18 +148,17 @@ export async function POST(request: NextRequest) {
     let income: any[] = [];
     if (quoteItems) {
       income = quoteItems.map((item: any) => ({
-        description: item.product_name,
+        description: item.description ? `${item.product_name}\n${item.description}` : item.product_name,
         quantity: item.quantity,
         price: item.line_total / item.quantity // price after discount, BEFORE VAT
       }))
     }
 
     // Add shipping if > 0
-    // Wait, need to fetch quote.shipping_cost explicitly if nested relation is weird.
     const { data: quote } = await supabase.from('quotes').select('shipping_cost, subtotal').eq('id', order.quote_id).single()
     if (quote && quote.shipping_cost > 0) {
       income.push({
-        description: 'דמי משלוח',
+        description: 'משלוח',
         quantity: 1,
         price: quote.shipping_cost
       })
@@ -155,7 +181,27 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const docPayload = {
+    // Fetch opportunity to get the subject and description
+    const { data: oppForDesc } = await supabase.from('opportunities').select('subject, description').eq('id', order.opportunity_id).single()
+
+    // Configuration Text (from settings data)
+    let invoiceFooter = '';
+    let invoiceEmailText = '';
+
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const settingsPath = path.join(process.cwd(), 'data', 'settings.json');
+      if (fs.existsSync(settingsPath)) {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        invoiceFooter = settings.invoice_footer || '';
+        invoiceEmailText = settings.invoice_email || '';
+      }
+    } catch (e) {
+      console.warn("Failed to load local settings for Invoice.");
+    }
+
+    const docPayload: any = {
       type: 305, // Tax Invoice
       client: {
         id: morningId
@@ -163,10 +209,16 @@ export async function POST(request: NextRequest) {
       currency: 'ILS',
       lang: 'he',
       income: income,
-      // You can add payment logic here if it's considered paid, but it's just Tax Invoice, not Receipt.
+      description: oppForDesc?.subject || '', // Subject maps to document description
+      remarks: oppForDesc?.description || '', // opp description maps to document remarks
+      footer: invoiceFooter,
+      email: {
+        send: true,
+        text: invoiceEmailText
+      }
     }
 
-    const docRes = await fetch('https://api.greeninvoice.co.il/api/v1/documents', {
+    const docRes = await fetch(`${apiUrl}/documents`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

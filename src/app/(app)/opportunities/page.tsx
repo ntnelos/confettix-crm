@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 interface Opportunity {
   id: string
   subject: string
-  status: 'new' | 'followup' | 'won' | 'lost' | string
+  status: 'new' | 'followup' | 'won' | 'lost' | 'pending_payment' | 'paid' | string
   calculated_value: number
   lead_source: string | null
   created_at: string
+  updated_at: string
   organizations?: { name: string } | null
   contacts?: { name: string } | null
 }
@@ -19,14 +21,19 @@ const STATUSES = [
   { id: 'new', label: 'חדש', color: 'var(--pink)', bg: 'rgba(230,0,126,0.1)' },
   { id: 'followup', label: 'במעקב', color: '#ff9800', bg: 'rgba(255,152,0,0.1)' },
   { id: 'won', label: 'זכייה', color: '#4caf50', bg: 'rgba(76,175,80,0.1)' },
-  { id: 'lost', label: 'הפסד / סגור', color: '#9e9e9e', bg: 'rgba(158,158,158,0.1)' }
+  { id: 'pending_payment', label: 'ממתין לתשלום', color: '#3f51b5', bg: 'rgba(63,81,181,0.1)' },
+  { id: 'paid', label: 'שולם', color: '#009688', bg: 'rgba(0,150,136,0.1)' },
+  { id: 'lost', label: 'בוטל / סגור', color: '#9e9e9e', bg: 'rgba(158,158,158,0.1)' }
 ]
 
-export default function OpportunitiesPage() {
+function OpportunitiesContent() {
   const supabase = createClient()
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'kanban' | 'list'>('kanban')
+  const [view, setView] = useState<'kanban' | 'list'>('list')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortField, setSortField] = useState<keyof Opportunity>('updated_at')
+  const [sortAsc, setSortAsc] = useState(false)
 
   const fetchOpps = async () => {
     setLoading(true)
@@ -41,7 +48,9 @@ export default function OpportunitiesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchOpps() }, [])
+  useEffect(() => { 
+    fetchOpps() 
+  }, [])
 
   const updateOppStatus = async (id: string, newStatus: string) => {
     // Optimistic UI Update
@@ -75,10 +84,31 @@ export default function OpportunitiesPage() {
     }
   }
 
+  const filteredOpps = opportunities.filter(o => 
+    o.subject?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (o.organizations?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (o.contacts?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    let aVal = a[sortField] || ''
+    let bVal = b[sortField] || ''
+    if (sortField === 'calculated_value' || sortField === 'status') {
+       aVal = String(aVal); bVal = String(bVal);
+       if (sortField === 'calculated_value') { aVal = Number(aVal) || 0; bVal = Number(bVal) || 0; }
+    }
+    if (aVal < bVal) return sortAsc ? -1 : 1
+    if (aVal > bVal) return sortAsc ? 1 : -1
+    return 0
+  })
+
   const grouped = STATUSES.map(s => ({
     ...s,
-    items: opportunities.filter(o => o.status === s.id)
+    items: filteredOpps.filter(o => o.status === s.id)
   }))
+
+  const handleSort = (field: keyof Opportunity) => {
+    if (sortField === field) setSortAsc(!sortAsc)
+    else { setSortField(field); setSortAsc(false) }
+  }
 
   const totalValue = opportunities.filter(o => o.status !== 'lost').reduce((sum, o) => sum + (o.calculated_value || 0), 0)
 
@@ -122,14 +152,25 @@ export default function OpportunitiesPage() {
       </div>
 
       <div className="page-body">
+        <div style={{ marginBottom: 20 }}>
+          <input 
+            type="text" 
+            placeholder="חיפוש לפי סטטוס, נושא הזדמנות, שם ארגון או מזהה..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ width: '100%', maxWidth: 400, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }}
+          />
+        </div>
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: 100 }}>
             <span className="spinner" style={{ width: 40, height: 40, borderTopColor: 'var(--pink)' }} />
           </div>
         ) : view === 'kanban' ? (
           /* KANBAN VIEW */
-          <div style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 20, minHeight: 'calc(100vh - 160px)', alignItems: 'flex-start' }}>
-            {grouped.map(col => (
+          <div className="kanban-scroll-wrapper" style={{ overflowX: 'auto', paddingBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 20, width: 'max-content', padding: '0 20px 20px 0', minHeight: 'calc(100vh - 160px)', alignItems: 'flex-start' }}>
+              {grouped.map(col => (
               <div 
                 key={col.id} 
                 style={{ 
@@ -201,6 +242,7 @@ export default function OpportunitiesPage() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         ) : (
           /* LIST VIEW */
@@ -210,13 +252,15 @@ export default function OpportunitiesPage() {
                 <tr>
                   <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>נושא ההזדמנות</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>שיוך</th>
-                  <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>סטטוס</th>
-                  <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>ערך העסקה</th>
-                  <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>תאריך יצירה</th>
+                  <th style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>איש קשר</th>
+                  <th onClick={() => handleSort('status')} style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)', cursor: 'pointer', whiteSpace: 'nowrap' }}>סטטוס {sortField === 'status' ? (sortAsc ? ' 🔼' : ' 🔽') : ''}</th>
+                  <th onClick={() => handleSort('calculated_value')} style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)', cursor: 'pointer', whiteSpace: 'nowrap' }}>ערך העסקה {sortField === 'calculated_value' ? (sortAsc ? ' 🔼' : ' 🔽') : ''}</th>
+                  <th onClick={() => handleSort('created_at')} style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)', cursor: 'pointer', whiteSpace: 'nowrap' }}>תאריך יצירה {sortField === 'created_at' ? (sortAsc ? ' 🔼' : ' 🔽') : ''}</th>
+                  <th onClick={() => handleSort('updated_at')} style={{ padding: '16px 24px', textAlign: 'right', borderBottom: '1px solid var(--border)', cursor: 'pointer', whiteSpace: 'nowrap' }}>תאריך עדכון {sortField === 'updated_at' ? (sortAsc ? ' 🔼' : ' 🔽') : ''}</th>
                 </tr>
               </thead>
               <tbody>
-                {opportunities.map(opp => (
+                {filteredOpps.map(opp => (
                   <tr key={opp.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                     <td style={{ padding: '16px 24px' }}>
                       <Link href={`/opportunities/${opp.id}`} style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -225,6 +269,9 @@ export default function OpportunitiesPage() {
                     </td>
                     <td style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontSize: 13 }}>
                       {opp.organizations?.name || opp.contacts?.name || '—'}
+                    </td>
+                    <td style={{ padding: '16px 24px', color: 'var(--text-secondary)', fontSize: 13 }}>
+                      {opp.contacts?.name || '—'}
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <span className="badge" style={{ 
@@ -240,6 +287,9 @@ export default function OpportunitiesPage() {
                     <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: 13 }}>
                       {new Date(opp.created_at).toLocaleDateString('he-IL')}
                     </td>
+                    <td style={{ padding: '16px 24px', color: 'var(--text-muted)', fontSize: 13 }}>
+                      {new Date(opp.updated_at || opp.created_at).toLocaleDateString('he-IL')}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -250,6 +300,17 @@ export default function OpportunitiesPage() {
     </>
   )
 }
+
+const OpportunitiesPage = dynamic(() => Promise.resolve(OpportunitiesContent), {
+  ssr: false,
+  loading: () => (
+    <div style={{ textAlign: 'center', padding: 100 }}>
+       <span className="spinner" style={{ width: 40, height: 40, borderTopColor: 'var(--pink)' }} />
+    </div>
+  )
+})
+
+export default OpportunitiesPage
 
 function PlusIcon() {
   return (

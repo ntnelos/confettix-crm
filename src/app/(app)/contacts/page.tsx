@@ -21,16 +21,18 @@ interface Contact {
 export default function ContactsPage() {
   const supabase = createClient()
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   const fetchContacts = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('contacts')
-      .select('*, organizations(name)')
+      .select('*, organizations(name)', { count: 'exact' })
       .order('created_at', { ascending: false })
 
+    if (count !== null) setTotalCount(count)
     if (!error && data) setContacts(data as Contact[])
     setLoading(false)
   }
@@ -50,7 +52,7 @@ export default function ContactsPage() {
 
   const handleDeleteContact = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את איש הקשר "${name}" לצמיתות?`)) return
-    
+
     const { error } = await (supabase.from('contacts') as any).delete().eq('id', id)
     if (!error) {
       setContacts(prev => prev.filter(c => c.id !== id))
@@ -80,7 +82,7 @@ export default function ContactsPage() {
               <span>אנשי קשר</span>
             </div>
             <h1 className="page-title">אנשי קשר</h1>
-            <p className="page-subtitle">ניהול כל אנשי הקשר של הארגונים במערכת</p>
+            <p className="page-subtitle">ניהול כל אנשי הקשר של הארגונים במערכת </p>
           </div>
           <div className="actions-row">
             <Link href="/contacts/new" className="btn btn-primary">
@@ -116,7 +118,10 @@ export default function ContactsPage() {
                 />
               </div>
               <div className="text-muted">
-                {filtered.length === 0 ? 'לא נמצאו תוצאות' : `סה"כ ${filtered.length} אנשי קשר`}
+                {search
+                  ? `${filtered.length} תוצאות מתוך ${totalCount} אנשי קשר`
+                  : `סה"כ ${totalCount} אנשי קשר`
+                }
               </div>
             </div>
 
@@ -205,8 +210,11 @@ export default function ContactsPage() {
             </table>
 
             <div className="table-pagination">
-              <div className="pagination-info">
-                מציג {filtered.length} מתוך {contacts.length} אנשי קשר
+              <div className="text-muted" style={{ fontSize: 13 }}>
+                {search
+                  ? `${filtered.length} תוצאות מתוך ${totalCount} אנשי קשר`
+                  : `סה"כ ${totalCount} אנשי קשר`
+                }
               </div>
             </div>
           </div>

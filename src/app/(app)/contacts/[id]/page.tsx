@@ -49,6 +49,7 @@ export default function ContactDetailsPage() {
   const [organizations, setOrganizations] = useState<{id: string, name: string}[]>([])
   const [showOrgAssignModal, setShowOrgAssignModal] = useState(false)
   const [orgSearchQuery, setOrgSearchQuery] = useState('')
+  const [isSearchingOrgs, setIsSearchingOrgs] = useState(false)
   const [isCreatingOrg, setIsCreatingOrg] = useState(false)
   
   // Addresses State
@@ -60,8 +61,6 @@ export default function ContactDetailsPage() {
   useEffect(() => {
     async function loadData() {
       const contactRes: any = await supabase.from('contacts').select('*, organizations(id, name)').eq('id', id).single()
-      const orgsRes: any = await supabase.from('organizations').select('id, name').order('name')
-      
       if (contactRes.error || !contactRes.data) {
         console.error("Contact not found", contactRes.error)
         router.push('/contacts')
@@ -69,7 +68,6 @@ export default function ContactDetailsPage() {
       }
       const c = contactRes.data as Contact
       setContact(c)
-      if (orgsRes.data) setOrganizations(orgsRes.data)
 
       // Fetch Addresses (belonging to Org or Contact directly)
       const addrQuery = supabase.from('delivery_addresses').select('*')
@@ -106,6 +104,26 @@ export default function ContactDetailsPage() {
 
     if (id) loadData()
   }, [id, router, supabase])
+
+  // Debounced search for organizations
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!showOrgAssignModal) return
+      
+      setIsSearchingOrgs(true)
+      const query = supabase.from('organizations').select('id, name')
+      
+      if (orgSearchQuery.trim()) {
+        query.ilike('name', `%${orgSearchQuery.trim()}%`)
+      }
+      
+      const { data } = await query.order('name').limit(20)
+      if (data) setOrganizations(data)
+      setIsSearchingOrgs(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [orgSearchQuery, showOrgAssignModal, supabase])
 
   const handleDeleteContact = async () => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את איש הקשר "${contact?.name}" לצמיתות?`)) return
@@ -574,8 +592,12 @@ export default function ContactDetailsPage() {
               )}
 
               {/* SEARCH RESULTS */}
-              <div style={{ maxHeight: 250, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                {filteredOrgs.length > 0 ? filteredOrgs.map(org => (
+              <div style={{ maxHeight: 250, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, minHeight: 100 }}>
+                {isSearchingOrgs ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                    <span className="spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--pink)' }} />
+                  </div>
+                ) : organizations.length > 0 ? organizations.map(org => (
                   <div 
                     key={org.id} 
                     onClick={() => handleAssignOrg(org.id, org.name)}
