@@ -56,8 +56,8 @@ function NewOpportunityFormImpl() {
   useEffect(() => {
     async function loadInitial() {
       const [{ data: orgs }, { data: conts }] = await Promise.all([
-        supabase.from('organizations').select('id, name').order('name').limit(20),
-        supabase.from('contacts').select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
+        (supabase.from('organizations') as any).select('id, name').order('name').limit(20),
+        (supabase.from('contacts') as any).select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
       ])
       if (orgs) setOrganizations(orgs)
       if (conts) setContacts(conts as any)
@@ -69,8 +69,7 @@ function NewOpportunityFormImpl() {
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (!contactSearchQuery.trim()) {
-        // Restore initial if cleared
-        const { data } = await supabase.from('contacts').select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
+        const { data } = await (supabase.from('contacts') as any).select('id, name, email, mobile, organization_id, organizations(name)').order('name').limit(20)
         if (data) setContacts(data as any)
         return
       }
@@ -78,7 +77,7 @@ function NewOpportunityFormImpl() {
       const q = contactSearchQuery.trim()
       
       // 1. Find matching organizations
-      const { data: matchedOrgs } = await supabase.from('organizations').select('id').ilike('name', `%${q}%`)
+      const { data: matchedOrgs } = await (supabase.from('organizations') as any).select('id').ilike('name', `%${q}%`)
       const orgIds = (matchedOrgs as any[])?.map(o => o.id) || []
       
       // 2. Build explicit OR query
@@ -87,8 +86,8 @@ function NewOpportunityFormImpl() {
         orQuery += `,organization_id.in.(${orgIds.join(',')})`
       }
       
-      const { data } = await supabase
-        .from('contacts')
+      const { data } = await (supabase
+        .from('contacts') as any)
         .select('id, name, email, mobile, organization_id, organizations(name)')
         .or(orQuery)
         .limit(50)
@@ -108,8 +107,8 @@ function NewOpportunityFormImpl() {
         return
       }
       
-      const { data } = await supabase
-        .from('organizations')
+      const { data } = await (supabase
+        .from('organizations') as any)
         .select('id, name')
         .ilike('name', `%${orgSearchQuery.trim()}%`)
         .limit(50)
@@ -129,7 +128,7 @@ function NewOpportunityFormImpl() {
     // Attempt Edit Mode Init
     if (editId) {
       const loadEditedOpp = async () => {
-        const { data, error } = await supabase.from('opportunities').select('*, contacts(name), organizations(name)').eq('id', editId).single()
+        const { data, error } = await (supabase.from('opportunities') as any).select('*, contacts(name), organizations(name)').eq('id', editId).single()
         if (data) {
           setForm({
             subject: data.subject || '',
@@ -153,7 +152,7 @@ function NewOpportunityFormImpl() {
       let resolvedOrgId = oId
       
       if (cId) {
-        const { data: c } = await supabase.from('contacts').select('id, name, organization_id, organizations(name)').eq('id', cId).single()
+        const { data: c } = await (supabase.from('contacts') as any).select('id, name, organization_id, organizations(name)').eq('id', cId).single()
         if (c) {
           setSelectedContactName(c.name)
           if (c.organization_id && c.organizations) {
@@ -164,7 +163,7 @@ function NewOpportunityFormImpl() {
       }
       
       if (resolvedOrgId && !selectedOrgName) {
-         const { data: o } = await supabase.from('organizations').select('id, name').eq('id', resolvedOrgId).single()
+         const { data: o } = await (supabase.from('organizations') as any).select('id, name').eq('id', resolvedOrgId).single()
          if (o) setSelectedOrgName(o.name)
       }
 
