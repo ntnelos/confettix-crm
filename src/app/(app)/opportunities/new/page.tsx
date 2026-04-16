@@ -79,7 +79,7 @@ function NewOpportunityFormImpl() {
       
       // 1. Find matching organizations
       const { data: matchedOrgs } = await supabase.from('organizations').select('id').ilike('name', `%${q}%`)
-      const orgIds = matchedOrgs?.map(o => o.id) || []
+      const orgIds = (matchedOrgs as any[])?.map(o => o.id) || []
       
       // 2. Build explicit OR query
       let orQuery = `name.ilike.%${q}%,email.ilike.%${q}%,mobile.ilike.%${q}%`
