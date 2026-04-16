@@ -66,8 +66,8 @@ export default function OrganizationDetailsPage() {
   useEffect(() => {
     async function loadData() {
       // Fetch Organization
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
+      const { data: orgData, error: orgError } = await (supabase
+        .from('organizations') as any)
         .select('*')
         .eq('id', id)
         .single()
@@ -80,8 +80,8 @@ export default function OrganizationDetailsPage() {
       setOrg(orgData)
 
       // Fetch Contacts
-      const { data: contactsData } = await supabase
-        .from('contacts')
+      const { data: contactsData } = await (supabase
+        .from('contacts') as any)
         .select('*')
         .eq('organization_id', id)
 
@@ -90,8 +90,8 @@ export default function OrganizationDetailsPage() {
       }
 
       // Fetch Delivery Addresses
-      const { data: addressesData } = await supabase
-        .from('delivery_addresses')
+      const { data: addressesData } = await (supabase
+        .from('delivery_addresses') as any)
         .select('*')
         .eq('organization_id', id)
       if (addressesData) {
@@ -99,8 +99,8 @@ export default function OrganizationDetailsPage() {
       }
 
       // Fetch Opportunities
-      const { data: oppsData } = await supabase
-        .from('opportunities')
+      const { data: oppsData } = await (supabase
+        .from('opportunities') as any)
         .select('*')
         .eq('organization_id', id)
         .order('created_at', { ascending: false })

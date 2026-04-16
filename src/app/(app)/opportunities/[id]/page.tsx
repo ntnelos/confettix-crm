@@ -56,8 +56,8 @@ export default function OpportunityDetailsPage() {
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false)
 
   const loadData = async () => {
-    const { data: oppData, error: oppErr } = await supabase
-      .from('opportunities')
+    const { data: oppData, error: oppErr } = await (supabase
+      .from('opportunities') as any)
       .select('*, contacts(id,name), organizations(id,name)')
       .eq('id', id)
       .single()
@@ -71,15 +71,15 @@ export default function OpportunityDetailsPage() {
     
     setOpp(oppData as Opportunity)
     
-    const { data: updatesData } = await supabase
-      .from('opportunity_updates')
+    const { data: updatesData } = await (supabase
+      .from('opportunity_updates') as any)
       .select('*')
       .eq('opportunity_id', id)
       .order('created_at', { ascending: false })
     
     if (updatesData) setUpdates(updatesData as UpdateRecord[])
 
-    const { data: orderData } = await supabase.from('orders')
+    const { data: orderData } = await (supabase.from('orders') as any)
       .select('*, quotes(quote_number), invoices(*)')
       .eq('opportunity_id', id)
       .neq('status', 'cancelled')
