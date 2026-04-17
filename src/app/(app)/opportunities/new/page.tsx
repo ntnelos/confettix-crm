@@ -254,13 +254,15 @@ function NewOpportunityFormImpl() {
     }
 
     let sbError;
+    let newId = editId;
 
     if (editId) {
       const { error } = await (supabase.from('opportunities') as any).update(oppPayload).eq('id', editId)
       sbError = error
     } else {
-      const { error } = await (supabase.from('opportunities') as any).insert(oppPayload)
+      const { data, error } = await (supabase.from('opportunities') as any).insert(oppPayload).select().single()
       sbError = error
+      if (data) newId = data.id
     }
 
     if (sbError) {
@@ -269,7 +271,7 @@ function NewOpportunityFormImpl() {
       return
     }
 
-    router.push(editId ? `/opportunities/${editId}` : '/opportunities')
+    router.push(newId ? `/opportunities/${newId}` : '/opportunities')
   }
 
   if (!isMounted) {

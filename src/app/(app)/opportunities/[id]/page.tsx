@@ -176,6 +176,7 @@ export default function OpportunityDetailsPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to generate invoice')
       
       setInvoice(data.invoice)
+      await loadData()
       alert('חשבונית מס הופקה בהצלחה!')
       setShowInvoiceModal(false)
     } catch (err: any) {
@@ -202,6 +203,7 @@ export default function OpportunityDetailsPage() {
       if (error) throw error
       
       setInvoice(data)
+      await loadData()
       setShowInvoiceModal(false)
       alert('החשבונית קושרה בהצלחה!')
     } catch (err: any) {

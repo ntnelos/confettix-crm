@@ -168,9 +168,8 @@ function OpportunitiesContent() {
           </div>
         ) : view === 'kanban' ? (
           /* KANBAN VIEW */
-          <div className="kanban-scroll-wrapper" style={{ overflowX: 'auto', paddingBottom: 20 }}>
-            <div style={{ display: 'flex', gap: 20, width: 'max-content', padding: '0 20px 20px 0', minHeight: 'calc(100vh - 160px)', alignItems: 'flex-start' }}>
-              {grouped.map(col => (
+          <div className="kanban-scroll-wrapper" style={{ display: 'flex', overflowX: 'auto', gap: 20, paddingBottom: 20, alignItems: 'flex-start', minHeight: 'calc(100vh - 160px)' }}>
+            {grouped.map(col => (
               <div 
                 key={col.id} 
                 style={{ 
@@ -242,7 +241,6 @@ function OpportunitiesContent() {
                 </div>
               </div>
             ))}
-            </div>
           </div>
         ) : (
           /* LIST VIEW */
