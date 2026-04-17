@@ -235,23 +235,24 @@ export async function POST(request: NextRequest) {
 
     const docData = await docRes.json()
 
-    // 5. Data Storage (Insert into existing invoices table)
-    const newInvoice = {
+    // Morning API response structure:
+    // docData.id = document ID
+    // docData.number = invoice number
+    // docData.url.he = Hebrew PDF download URL
+    // docData.url.origin = original language PDF
+    const newInvoice: any = {
       order_id: order.id,
       green_invoice_id: docData.id,
-      invoice_number: String(docData.documentNumber || docData.number || 'חשבונית'), // depends on their response schema
-      type: 'invoice', // We enforce 'invoice' enum based on types
+      invoice_number: String(docData.number || docData.documentNumber || 'חשבונית'),
+      type: 'invoice',
       amount: docData.amount || order.total_amount,
-      pdf_url: docData.url?.he?.pdf || docData.pdfUrl || docData.fileUrl || null, // Common fields
+      pdf_url: docData.url?.he || docData.url?.origin || null,
       status: 'issued',
       issued_at: new Date().toISOString()
     }
     
-    // Wait, let's see what is standard returned PDF field: `url.he.pdf` or `url.en.pdf` or `downloadUrl`. According to their API, it's `downloadUrl` or `url`.
-    // I'll grab docData.documentUrl or docData.downloadUrl just in case.
-    if (docData.downloadUrl) {
-      newInvoice.pdf_url = docData.downloadUrl;
-    }
+    // Log the full docData for debugging
+    console.log('Morning docData:', JSON.stringify(docData, null, 2))
 
     const { data: insertedInvoice, error: invError } = await supabase.from('invoices').insert(newInvoice).select().single()
 
