@@ -165,6 +165,37 @@ export default function QuotePreviewPage() {
           html, body { background: white !important; }
           .quote-doc { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; border-radius: 0 !important; padding: 24px 36px !important; }
         }
+
+        @media screen and (max-width: 768px) {
+          .quote-doc {
+            padding: 24px 16px !important;
+            margin: 16px auto !important;
+          }
+          .doc-header {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 16px;
+          }
+          .doc-meta {
+            text-align: center !important;
+          }
+          .quote-table th, .quote-table td {
+            padding: 8px 6px !important;
+            font-size: 11px !important;
+          }
+          .send-toolbar {
+            justify-content: center;
+          }
+          .table-responsive-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 24px;
+          }
+          .quote-table {
+             margin-bottom: 0;
+          }
+        }
       `}</style>
 
       {/* Toolbar */}
@@ -236,47 +267,49 @@ export default function QuotePreviewPage() {
         {opp?.subject && <div className="doc-subtitle">{opp.subject}</div>}
 
         {/* Table */}
-        <table className="quote-table">
-          <thead>
-            <tr>
-              <th style={{ width: '25%' }}>מוצר</th>
-              <th style={{ width: '33%' }}>תיאור</th>
-              <th style={{ width: '8%', textAlign: 'center' }}>כמות</th>
-              <th style={{ width: '14%', textAlign: 'center' }}>מחיר</th>
-              <th style={{ width: '20%', textAlign: 'center' }}>סה״כ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map(item => (
-              <tr key={item.id}>
-                <td style={{ fontWeight: 600 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {item.image_url
-                      ? <img src={item.image_url} alt="" width={30} height={30}
-                          style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
-                      : <GiftIcon />
-                    }
-                    {item.product_name}
-                  </div>
-                </td>
-                <td style={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap' }}>{item.description || ''}</td>
-                <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                <td style={{ textAlign: 'center' }}>₪{Number(item.unit_price).toFixed(2)}</td>
-                <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{Number(item.line_total).toFixed(2)}</td>
+        <div className="table-responsive-wrapper">
+          <table className="quote-table">
+            <thead>
+              <tr>
+                <th style={{ width: '25%' }}>מוצר</th>
+                <th style={{ width: '33%' }}>תיאור</th>
+                <th style={{ width: '8%', textAlign: 'center' }}>כמות</th>
+                <th style={{ width: '14%', textAlign: 'center' }}>מחיר</th>
+                <th style={{ width: '20%', textAlign: 'center' }}>סה״כ</th>
               </tr>
-            ))}
+            </thead>
+            <tbody>
+              {items.map(item => (
+                <tr key={item.id}>
+                  <td style={{ fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {item.image_url
+                        ? <img src={item.image_url} alt="" width={30} height={30}
+                            style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
+                        : <GiftIcon />
+                      }
+                      {item.product_name}
+                    </div>
+                  </td>
+                  <td style={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap' }}>{item.description || ''}</td>
+                  <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                  <td style={{ textAlign: 'center' }}>₪{Number(item.unit_price).toFixed(2)}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{Number(item.line_total).toFixed(2)}</td>
+                </tr>
+              ))}
 
-            {shipping > 0 && (
-              <tr className="shipping-row">
-                <td><div style={{ display:'flex', alignItems:'center', gap:8 }}><span style={{width:30}}/> משלוח</div></td>
-                <td></td>
-                <td style={{ textAlign: 'center' }}>1</td>
-                <td style={{ textAlign: 'center' }}>₪{shipping.toFixed(2)}</td>
-                <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{shipping.toFixed(2)}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {shipping > 0 && (
+                <tr className="shipping-row">
+                  <td><div style={{ display:'flex', alignItems:'center', gap:8 }}><span style={{width:30}}/> משלוח</div></td>
+                  <td></td>
+                  <td style={{ textAlign: 'center' }}>1</td>
+                  <td style={{ textAlign: 'center' }}>₪{shipping.toFixed(2)}</td>
+                  <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{shipping.toFixed(2)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Disclaimers */}
         <div className="disclaimers">
