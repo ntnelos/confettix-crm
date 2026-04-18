@@ -450,7 +450,10 @@ function NewOpportunityFormImpl() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-              <Link href="/opportunities" className="btn btn-secondary">
+              <Link 
+                href={searchParams.get('edit_id') ? `/opportunities/${searchParams.get('edit_id')}` : "/opportunities"} 
+                className="btn btn-secondary"
+              >
                 ביטול
               </Link>
               <button type="submit" className="btn btn-primary" disabled={loading}>
