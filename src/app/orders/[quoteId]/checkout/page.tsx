@@ -319,9 +319,9 @@ export default function OrderCheckoutPage() {
           <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
 
             {/* Left Side: Forms */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
               {/* Header */}
-              <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="no-print checkout-header" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
                   <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
@@ -346,7 +346,7 @@ export default function OrderCheckoutPage() {
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
                   פרטי חשבונית ולקוח
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>שם החברה לחשבונית <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
@@ -369,7 +369,7 @@ export default function OrderCheckoutPage() {
                     />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+                <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>שם לקוח / איש קשר</label>
                     <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 13 }} placeholder="שם איש קשר" />
@@ -429,7 +429,7 @@ export default function OrderCheckoutPage() {
                 )}
 
                 {selectedAddressId === 'new' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8fafc', padding: 20, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#f8fafc', padding: 20, borderRadius: 8, border: '1px solid #cbd5e1' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>תווית הכתובת (למשל: סניף מרכזי)</label>
                       <input type="text" value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })} style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }} placeholder="סניף / ייעוד הכתובת" />
@@ -460,7 +460,7 @@ export default function OrderCheckoutPage() {
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
                   אמצעי תשלום
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 20, border: paymentMethod === 'bank_transfer' ? '2px solid #4caf50' : '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'bank_transfer' ? '#f0fdf4' : 'transparent', transition: 'all 0.2s', textAlign: 'center' }}>
                     <input type="radio" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={() => setPaymentMethod('bank_transfer')} style={{ display: 'none' }} />
                     <div style={{ fontSize: 32, opacity: paymentMethod === 'bank_transfer' ? 1 : 0.4 }}>🏦</div>
@@ -550,6 +550,14 @@ export default function OrderCheckoutPage() {
           </main>
           <style dangerouslySetInnerHTML={{
             __html: `
+        @media screen and (max-width: 768px) {
+          .web-main-container { padding: 16px 12px !important; }
+          .web-main-container main { grid-template-columns: 1fr !important; }
+          .checkout-header { flex-direction: column !important; align-items: stretch !important; padding: 20px !important; }
+          .checkout-header > div:last-child { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+          .responsive-grid { grid-template-columns: 1fr !important; }
+          .no-print h2 { font-size: 16px !important; }
+        }
         @media print {
           body { 
             background: white !important; 
