@@ -15,6 +15,7 @@ interface Contact {
   fireberry_account_number: string | null
   notes: string | null
   created_at: string
+  organization_id: string | null
   organizations?: { name: string } | null
 }
 
@@ -27,13 +28,38 @@ export default function ContactsPage() {
 
   const fetchContacts = async () => {
     setLoading(true)
-    const { data, error, count } = await supabase
-      .from('contacts')
-      .select('*, organizations(name)', { count: 'exact' })
-      .order('created_at', { ascending: false })
+    let allData: Contact[] = []
+    let total = 0
+    let from = 0
+    const step = 1000
 
-    if (count !== null) setTotalCount(count)
-    if (!error && data) setContacts(data as Contact[])
+    while (true) {
+      const { data, error, count } = await supabase
+        .from('contacts')
+        .select('*, organizations(name)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, from + step - 1)
+
+      if (error) {
+        console.error('Error fetching contacts:', error)
+        break
+      }
+
+      if (count !== null && total === 0) {
+        total = count
+        setTotalCount(count)
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...(data as Contact[])]
+        from += data.length
+        if (data.length < step) break // Reached the end
+      } else {
+        break
+      }
+    }
+
+    setContacts(allData)
     setLoading(false)
   }
 
@@ -42,11 +68,20 @@ export default function ContactsPage() {
   const filtered = contacts.filter(c => {
     if (!search) return true
     const q = search.toLowerCase()
+    const name = (c.name || '').toLowerCase()
+    const email = (c.email || '').toLowerCase()
+    const mobile = (c.mobile || '').toLowerCase()
+    const phone = (c.phone || '').toLowerCase()
+    const orgName = ((c.organizations as any)?.name || '').toLowerCase()
+    const notes = (c.notes || '').toLowerCase()
+
     return (
-      c.name?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.mobile?.includes(q) ||
-      (c.organizations as { name: string } | null)?.name?.toLowerCase().includes(q)
+      name.includes(q) ||
+      email.includes(q) ||
+      mobile.includes(q) ||
+      phone.includes(q) ||
+      orgName.includes(q) ||
+      notes.includes(q)
     )
   })
 
@@ -64,10 +99,7 @@ export default function ContactsPage() {
   return (
     <>
       <div className="topbar">
-        <div className="topbar-search">
-          <SearchIcon />
-          <input type="text" placeholder="חיפוש אנשי קשר..." />
-        </div>
+        <div style={{ flex: 1 }} />
         <div className="topbar-actions">
           <button className="topbar-icon-btn"><BellIcon /></button>
         </div>
@@ -161,10 +193,20 @@ export default function ContactsPage() {
                         </Link>
                       </td>
                       <td>
-                        {(contact.organizations as { name: string } | null)?.name ? (
-                          <span className="badge badge-gray">
-                            {(contact.organizations as { name: string }).name}
-                          </span>
+                        {contact.organization_id && (contact.organizations as any)?.name ? (
+                          <Link 
+                            href={`/organizations/${contact.organization_id}`} 
+                            className="badge badge-gray" 
+                            style={{ 
+                              cursor: 'pointer', 
+                              transition: 'all 0.2s',
+                              textDecoration: 'none'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                          >
+                            {(contact.organizations as any).name}
+                          </Link>
                         ) : (
                           <span className="td-muted">—</span>
                         )}
