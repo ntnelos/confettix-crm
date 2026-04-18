@@ -43,7 +43,14 @@ function OpportunitiesContent() {
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      setOpportunities(data as Opportunity[])
+      // Deduplicate by ID
+      const uniqueMap = new Map<string, Opportunity>()
+      ;(data as Opportunity[]).forEach(opp => {
+        if (!uniqueMap.has(opp.id)) {
+          uniqueMap.set(opp.id, opp)
+        }
+      })
+      setOpportunities(Array.from(uniqueMap.values()))
     }
     setLoading(false)
   }

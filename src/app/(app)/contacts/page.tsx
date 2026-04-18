@@ -59,7 +59,15 @@ export default function ContactsPage() {
       }
     }
 
-    setContacts(allData)
+    // Deduplicate by ID just to be absolutely safe against React warnings
+    const uniqueMap = new Map<string, Contact>()
+    allData.forEach(c => {
+      if (!uniqueMap.has(c.id)) {
+        uniqueMap.set(c.id, c)
+      }
+    })
+    
+    setContacts(Array.from(uniqueMap.values()))
     setLoading(false)
   }
 
