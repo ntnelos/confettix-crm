@@ -195,6 +195,33 @@ export default function QuotePreviewPage() {
           .quote-table {
              margin-bottom: 0;
           }
+          
+          /* Toolbar Buttons on small mobile screens */
+          .send-toolbar {
+            padding: 10px 8px !important;
+            gap: 6px !important;
+            justify-content: center !important;
+          }
+          .tb-label {
+            display: none !important;
+          }
+          .tb-btn {
+            padding: 8px !important;
+            font-size: 11px !important;
+            flex: 1;
+            justify-content: center;
+            white-space: nowrap;
+          }
+          .tb-btn svg {
+            width: 13px !important;
+            height: 13px !important;
+            margin-left: -2px;
+          }
+          .inline-input {
+            width: 140px !important;
+            font-size: 12px !important;
+            padding: 6px 10px !important;
+          }
         }
       `}</style>
 
