@@ -486,13 +486,47 @@ export default function InventoryPage() {
                         </td>
                         <td className="py-3 px-4">
                           {editingItemId === item.id ? (
-                            <input
-                              className="form-input text-sm"
-                              placeholder="מופרד בפסיקים"
-                              style={{ width: '100%', minWidth: 100, padding: '4px 8px' }}
-                              value={editFormData.tags}
-                              onChange={e => setEditFormData(p => ({ ...p, tags: e.target.value }))}
-                            />
+                            <div className="flex flex-col gap-2" style={{ minWidth: 150 }}>
+                              <input
+                                className="form-input text-sm"
+                                placeholder="מופרד בפסיקים"
+                                style={{ width: '100%', padding: '4px 8px' }}
+                                value={editFormData.tags}
+                                onChange={e => setEditFormData(p => ({ ...p, tags: e.target.value }))}
+                              />
+                              {allTags.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 80, overflowY: 'auto' }}>
+                                  {allTags.map(t => {
+                                    const currentTags = editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+                                    const isActive = currentTags.includes(t)
+                                    return (
+                                      <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isActive) {
+                                            setEditFormData(p => ({ ...p, tags: currentTags.filter(tag => tag !== t).join(', ') }))
+                                          } else {
+                                            setEditFormData(p => ({ ...p, tags: currentTags.length > 0 ? `${currentTags.join(', ')}, ${t}` : t }))
+                                          }
+                                        }}
+                                        style={{
+                                          fontSize: 10,
+                                          padding: '2px 6px',
+                                          borderRadius: 12,
+                                          cursor: 'pointer',
+                                          border: isActive ? '1px solid var(--pink)' : '1px solid var(--border)',
+                                          background: isActive ? 'var(--pink)' : 'var(--surface-2)',
+                                          color: isActive ? '#fff' : 'var(--text-secondary)'
+                                        }}
+                                      >
+                                        {t}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 150 }}>
                               {item.tags && item.tags.length > 0 ? (
