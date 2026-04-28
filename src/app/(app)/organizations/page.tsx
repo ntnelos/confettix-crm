@@ -23,12 +23,19 @@ export default function OrganizationsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  const fetchOrgs = async () => {
+  const fetchOrgs = async (query = '') => {
     setLoading(true)
-    const { data, error, count } = await supabase
+    let dbQuery = supabase
       .from('organizations')
       .select('*, contacts(count)', { count: 'exact' })
       .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (query) {
+      dbQuery = dbQuery.or(`name.ilike.%${query}%,industry.ilike.%${query}%,company_number.ilike.%${query}%`)
+    }
+
+    const { data, error, count } = await dbQuery
 
     if (count !== null) setTotalCount(count)
 
@@ -42,17 +49,14 @@ export default function OrganizationsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchOrgs() }, [])
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchOrgs(search)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [search])
 
-  const filtered = orgs.filter(o => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (
-      o.name?.toLowerCase().includes(q) ||
-      o.industry?.toLowerCase().includes(q) ||
-      o.company_number?.includes(q)
-    )
-  })
+  const filtered = orgs // Kept variable name to minimize JSX edits
 
   const handleDeleteOrg = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את הארגון "${name}" לצמיתות?`)) return
@@ -68,10 +72,7 @@ export default function OrganizationsPage() {
   return (
     <>
       <div className="topbar">
-        <div className="topbar-search">
-          <SearchIcon />
-          <input type="text" placeholder="חיפוש בארגונים..." />
-        </div>
+        <div />
         <div className="topbar-actions">
           <button className="topbar-icon-btn"><BellIcon /></button>
         </div>
@@ -96,40 +97,41 @@ export default function OrganizationsPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <span className="spinner" style={{ width: 28, height: 28 }} />
-          </div>
-        ) : orgs.length === 0 && !search ? (
-          <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>🏢</div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--text-secondary)' }}>
-              אין ארגונים עדיין
-            </h2>
-            <p className="text-muted" style={{ marginBottom: 20 }}>הוסף את הארגון הראשון כדי להתחיל</p>
-            <Link href="/organizations/new" className="btn btn-primary">הוסף ארגון</Link>
-          </div>
-        ) : (
-          <div className="table-container">
-            <div className="table-toolbar">
-              <div className="search-field">
-                <SearchIcon />
-                <input
-                  type="text"
-                  placeholder="חיפוש שם ארגון, תעשייה, עיר..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="text-muted" style={{ fontSize: 13 }}>
-                {search
-                  ? `${filtered.length} תוצאות מתוך ${totalCount} ארגונים`
-                  : `סה"כ ${totalCount} ארגונים`
-                }
-              </div>
+        <div className="table-container">
+          <div className="table-toolbar">
+            <div className="search-field">
+              <SearchIcon />
+              <input
+                type="text"
+                placeholder="חיפוש שם ארגון, תעשייה, עיר..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
+            <div className="text-muted" style={{ fontSize: 13 }}>
+              {search
+                ? `${filtered.length} תוצאות מתוך ${totalCount} ארגונים`
+                : `סה"כ ${totalCount} ארגונים`
+              }
+            </div>
+          </div>
 
-            <table>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <span className="spinner" style={{ width: 28, height: 28 }} />
+            </div>
+          ) : orgs.length === 0 && !search ? (
+            <div className="card" style={{ textAlign: 'center', padding: '60px 20px', boxShadow: 'none', border: 'none', background: 'transparent' }}>
+              <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>🏢</div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                אין ארגונים עדיין
+              </h2>
+              <p className="text-muted" style={{ marginBottom: 20 }}>הוסף את הארגון הראשון כדי להתחיל</p>
+              <Link href="/organizations/new" className="btn btn-primary">הוסף ארגון</Link>
+            </div>
+          ) : (
+            <>
+              <table>
               <thead>
                 <tr>
                   <th>שם ארגון</th>
@@ -204,8 +206,9 @@ export default function OrganizationsPage() {
                 }
               </div>
             </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </>
   )

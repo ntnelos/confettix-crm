@@ -1,0 +1,104 @@
+> [debug] [2026-04-26T17:06:44.566Z] Vercel CLI 52.0.0
+> [debug] [2026-04-26T17:06:44.585Z] Agent/TTY/nonInteractive: isAgent=true agentName=antigravity stdin.isTTY=true --non-interactive=false explicitFalse=false => nonInteractive=false
+> [debug] [2026-04-26T17:06:44.585Z] user supplied a possible target for deployment or an extension
+> [debug] [2026-04-26T17:06:44.594Z] failed to find extension command with name "vercel---prod"
+> [debug] [2026-04-26T17:06:44.650Z] Setting target to production
+> [debug] [2026-04-26T17:06:44.671Z] Spinner invoked (Retrieving project…) with a 1000ms delay
+> [debug] [2026-04-26T17:06:44.675Z] Valid access token, skipping token refresh.
+> [debug] [2026-04-26T17:06:44.727Z] #1 → GET https://api.vercel.com/teams/team_rhULLipWPYe426DvVijKNbu5?teamId=team_rhULLipWPYe426DvVijKNbu5
+> [debug] [2026-04-26T17:06:44.727Z] #2 → GET https://api.vercel.com/v9/projects/prj_qOAAfyjv9EocuhliBkRuituK1eSE?teamId=team_rhULLipWPYe426DvVijKNbu5
+> [debug] [2026-04-26T17:06:45.516Z] #1 ← 200 OK: sfo1::qsmmj-1777223205420-42ce002f5dab [789ms]
+> [debug] [2026-04-26T17:06:45.518Z] #2 ← 200 OK: sfo1::8kg4x-1777223205415-56e54e0fa024 [790ms]
+> [debug] [2026-04-26T17:06:45.646Z] Spinner invoked (Deploying ntnelos-projects/confettix-crm) with a 0ms delay
+[client-debug] 2026-04-26T17:06:45.646Z Creating deployment...
+[client-debug] 2026-04-26T17:06:45.646Z Provided 'path' is a directory.
+[client-debug] 2026-04-26T17:06:45.648Z Found 26 rules in .vercelignore
+[client-debug] 2026-04-26T17:06:45.648Z Building file tree...
+[client-debug] 2026-04-26T17:06:45.657Z Found 103 files in the specified directory
+[client-debug] 2026-04-26T17:06:45.690Z Yielding a 'hashes-calculated' event with 98 hashes
+> [debug] [2026-04-26T17:06:45.691Z] #3 → GET https://api.vercel.com/v9/projects/confettix-crm?teamId=team_rhULLipWPYe426DvVijKNbu5
+> [debug] [2026-04-26T17:06:46.032Z] #3 ← 200 OK: sfo1::59vct-1777223205910-7e5d0c5b038c [341ms]
+[client-debug] 2026-04-26T17:06:46.033Z Using provided API URL: https://api.vercel.com
+[client-debug] 2026-04-26T17:06:46.033Z Using provided user agent: vercel 52.0.0 node-v25.8.0 darwin (arm64)
+[client-debug] 2026-04-26T17:06:46.033Z Setting platform version to harcoded value 2
+[client-debug] 2026-04-26T17:06:46.033Z Creating the deployment and starting upload...
+[client-debug] 2026-04-26T17:06:46.034Z Determining necessary files for upload...
+[client-debug] 2026-04-26T17:06:46.034Z Creating deployment
+[client-debug] 2026-04-26T17:06:46.035Z Sending deployment creation API request
+[client-debug] 2026-04-26T17:06:46.325Z Deployment response: {"error":{"code":"missing_files","message":"Missing files","missing":["4237dc1b379a785ace524b65d79d97df978e690b"]}}
+[client-debug] 2026-04-26T17:06:46.325Z Error: Deployment request status is 400
+[client-debug] 2026-04-26T17:06:46.325Z 1 files are required to upload
+[client-debug] 2026-04-26T17:06:46.325Z Yielding a 'file-count' event
+> [debug] [2026-04-26T17:06:46.325Z] Total files 98, 1 changed
+> [debug] [2026-04-26T17:06:46.326Z] Spinner invoked (Uploading [--------------------] (0.0B/1.6KB)) with a 0ms delay
+[client-debug] 2026-04-26T17:06:46.326Z Building an upload list...
+[client-debug] 2026-04-26T17:06:46.327Z Starting upload
+[client-debug] 2026-04-26T17:06:46.327Z POST https://api.vercel.com/v2/files?teamId=team_rhULLipWPYe426DvVijKNbu5
+> [debug] [2026-04-26T17:06:46.328Z] Spinner invoked (Uploading [====================] (1.6KB/1.6KB)) with a 0ms delay
+[client-debug] 2026-04-26T17:06:46.681Z DONE in 354ms: POST https://api.vercel.com/v2/files?teamId=team_rhULLipWPYe426DvVijKNbu5
+[client-debug] 2026-04-26T17:06:46.681Z File 4237dc1b379a785ace524b65d79d97df978e690b (/Users/netanelyosef/Dropbox/Development/בניית אתרים/Anti Gravity Projects/Confettix CRM  1.0/confettix-crm/deploy_output.txt) uploaded
+[client-debug] 2026-04-26T17:06:46.681Z Yielding a 'file-uploaded' event
+> [debug] [2026-04-26T17:06:46.681Z] Uploaded: /Users/netanelyosef/Dropbox/Development/בניית אתרים/Anti Gravity Projects/Confettix CRM  1.0/confettix-crm/deploy_output.txt (1.6KB)
+[client-debug] 2026-04-26T17:06:46.681Z All files uploaded
+[client-debug] 2026-04-26T17:06:46.681Z Yielding a 'all-files-uploaded' event
+[client-debug] 2026-04-26T17:06:46.681Z Starting deployment creation
+[client-debug] 2026-04-26T17:06:46.681Z Creating deployment
+[client-debug] 2026-04-26T17:06:46.682Z Sending deployment creation API request
+[client-debug] 2026-04-26T17:06:48.655Z Deployment response: {"alias":["confettix-crm-ntnelos-projects.vercel.app","confettix-crm-ntnelos-ntnelos-projects.vercel.app"],"aliasAssigned":false,"automaticAliases":["confettix-crm-ntnelos-projects.vercel.app","confettix-crm-ntnelos-ntnelos-projects.vercel.app"],"bootedAt":1777223207386,"buildingAt":1777223207386,"buildSkipped":false,"createdAt":1777223207386,"creator":{"uid":"S2QpgxVlWpVGYqrxZwJihNYm","username":"ntnelos"},"id":"dpl_3AtBUDoLS3DuJJyohYgNx1vfmNWx","name":"confettix-crm","meta":{"githubCommitAuthorName":"netanel yosef","githubCommitAuthorEmail":"netanelyosef@h-MacBook-Pro-sl-netanel-2.local","githubCommitMessage":"Shrink quote preview toolbar buttons to fit on 340px mobile width","githubCommitOrg":"ntnelos","githubCommitRef":"main","githubCommitRepo":"confettix-crm","githubCommitSha":"fb735eee7838633bd98b5de4e667c2cb3ff87e0f","githubDeployment":"1","githubOrg":"ntnelos","githubRepo":"confettix-crm","gitDirty":"1","actor":"antigravity"},"originCacheRegion":"iad1","project":{"id":"prj_qOAAfyjv9EocuhliBkRuituK1eSE","name":"confettix-crm","framework":"nextjs"},"public":false,"readyState":"INITIALIZING","regions":["iad1"],"source":"cli","status":"INITIALIZING","target":"production","team":{"id":"team_rhULLipWPYe426DvVijKNbu5","name":"ntnelos' projects","slug":"ntnelos-projects"},"type":"LAMBDAS","url":"confettix-k56cty0qm-ntnelos-projects.vercel.app","version":2,"previewCommentsEnabled":true,"oidcTokenClaims":{"sub":"owner:ntnelos-projects:project:confettix-crm:environment:production","iss":"https://oidc.vercel.com/ntnelos-projects","scope":"owner:ntnelos-projects:project:confettix-crm:environment:production","aud":"https://vercel.com/ntnelos-projects","owner":"ntnelos-projects","owner_id":"team_rhULLipWPYe426DvVijKNbu5","project":"confettix-crm","project_id":"prj_qOAAfyjv9EocuhliBkRuituK1eSE","environment":"production","plan":"hobby"},"lambdas":[{"id":"bld_e1qmx3eqh","createdAt":1777223208277,"entrypoint":".","readyState":"READY","readyStateAt":1777223208277,"output":[]}],"aliasAssignedAt":null,"build":{"env":[]},"builds":[],"createdIn":"sfo1","env":[],"functions":null,"inspectorUrl":"https://vercel.com/ntnelos-projects/confettix-crm/3AtBUDoLS3DuJJyohYgNx1vfmNWx","isInConcurrentBuildsQueue":false,"isInSystemBuildsQueue":true,"ownerId":"team_rhULLipWPYe426DvVijKNbu5","plan":"hobby","projectId":"prj_qOAAfyjv9EocuhliBkRuituK1eSE","projectSettings":{"buildCommand":null,"devCommand":null,"framework":"nextjs","commandForIgnoringBuildStep":null,"installCommand":null,"outputDirectory":null,"speedInsights":{"id":"JkzsFRhorpTuj9wGl9dTXFFpYRt","hasData":false},"webAnalytics":{"id":"wMuCUICPkOyiPa5fmP61vaSWy"},"nodeVersion":"24.x"},"routes":null,"config":{"version":1,"secureComputePrimaryRegion":null,"secureComputeFallbackRegion":null,"functionTimeout":300,"functionType":"fluid","functionMemoryType":"standard","isUsingActiveCPU":true,"resourceConfig":{"buildQueue":{"configuration":"SKIP_NAMESPACE_QUEUE"}}},"attribution":{"commitMeta":{"name":"netanel yosef","email":"netanelyosef@h-MacBook-Pro-sl-netanel-2.local","isVerified":false}}}
+[client-debug] 2026-04-26T17:06:48.655Z Deployment created
+[client-debug] 2026-04-26T17:06:48.655Z Yielding a 'created' event
+Inspect: https://vercel.com/ntnelos-projects/confettix-crm/3AtBUDoLS3DuJJyohYgNx1vfmNWx [3s]
+Production: https://confettix-k56cty0qm-ntnelos-projects.vercel.app [3s]
+https://confettix-k56cty0qm-ntnelos-projects.vercel.app> [debug] [2026-04-26T17:06:48.656Z] Spinner invoked (Building...) with a 0ms delay
+> [debug] [2026-04-26T17:06:48.656Z] #4 → GET https://api.vercel.com/v2/user
+[client-debug] 2026-04-26T17:06:48.656Z Waiting for deployment to be ready...
+[client-debug] 2026-04-26T17:06:48.656Z Waiting for builds and the deployment to complete...
+> [debug] [2026-04-26T17:06:48.964Z] #4 ← 200 OK: sfo1::v55zt-1777223208878-93f323542792 [308ms]
+> [debug] [2026-04-26T17:06:48.965Z] #5 → GET https://api.vercel.com/v3/now/deployments/dpl_3AtBUDoLS3DuJJyohYgNx1vfmNWx/events?direction=forward&follow=1&format=lines&teamId=team_rhULLipWPYe426DvVijKNbu5
+[client-debug] 2026-04-26T17:06:50.649Z Deployment state changed to BUILDING
+[client-debug] 2026-04-26T17:06:50.649Z Yielding a 'building' event
+> [debug] [2026-04-26T17:06:50.649Z] Spinner invoked (Building...) with a 0ms delay
+> [debug] [2026-04-26T17:06:51.312Z] #5 ← 200 OK: sfo1::dtb4k-1777223209186-2d0ee77238df [2.35s]
+> [debug] [2026-04-26T17:06:51.313Z] Spinner invoked (Building: Running build in Washington, D.C., USA (East) – iad1) with a 0ms delay
+> [debug] [2026-04-26T17:06:51.313Z] Spinner invoked (Building: Build machine configuration: 2 cores, 8 GB) with a 0ms delay
+> [debug] [2026-04-26T17:06:51.313Z] Spinner invoked (Building: Retrieving list of deployment files...) with a 0ms delay
+> [debug] [2026-04-26T17:06:51.313Z] Spinner invoked (Building: Downloading 103 deployment files...) with a 0ms delay
+> [debug] [2026-04-26T17:06:57.564Z] Spinner invoked (Building: Restored build cache from previous deployment (43vHXmiXCVWSY7P8ukzrDMBM6vUw)) with a 0ms delay
+> [debug] [2026-04-26T17:06:57.564Z] Spinner invoked (Building: Running "vercel build") with a 0ms delay
+> [debug] [2026-04-26T17:06:58.614Z] Spinner invoked (Building: Vercel CLI 51.6.1) with a 0ms delay
+> [debug] [2026-04-26T17:06:58.614Z] Spinner invoked (Building: Installing dependencies...) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: up to date in 808ms) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: 146 packages are looking for funding) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: run `npm fund` for details) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: Detected Next.js version: 16.2.2) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: Running "npm run build") with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: > confettix-crm@0.1.0 build) with a 0ms delay
+> [debug] [2026-04-26T17:06:59.664Z] Spinner invoked (Building: > next build) with a 0ms delay
+> [debug] [2026-04-26T17:07:00.709Z] Spinner invoked (Building: Applying modifyConfig from Vercel) with a 0ms delay
+> [debug] [2026-04-26T17:07:00.710Z] Spinner invoked (Building: ▲ Next.js 16.2.2 (Turbopack)) with a 0ms delay
+> [debug] [2026-04-26T17:07:00.710Z] Spinner invoked (Building: Creating an optimized production build ...) with a 0ms delay
+> [debug] [2026-04-26T17:07:24.652Z] Spinner invoked (Building: ✓ Compiled successfully in 24.1s) with a 0ms delay
+> [debug] [2026-04-26T17:07:24.655Z] Spinner invoked (Building: Running TypeScript ...) with a 0ms delay
+[client-debug] 2026-04-26T17:07:42.383Z Yielding a 'error' event
+> [debug] [2026-04-26T17:07:42.430Z] Error: Error: Command "npm run build" exited with 1
+Error: Command "npm run build" exited with 1
+    at Now.handleDeploymentError (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4756:12)
+    at processDeployment (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4499:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Now.create (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4647:24)
+    at async createDeploy (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/commands/deploy/index.js:180:12)
+    at async handleDefaultDeploy (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/commands/deploy/index.js:1615:18)
+    at async _Span.trace (/Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/@vercel/build-utils/dist/index.js:32191:14)
+    at async main (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/index.js:24394:18)
+> [debug] [2026-04-26T17:07:42.431Z] handling error: Error: Command "npm run build" exited with 1
+    at Now.handleDeploymentError (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4756:12)
+    at processDeployment (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4499:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Now.create (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/chunks/chunk-HUUTUVP5.js:4647:24)
+    at async createDeploy (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/commands/deploy/index.js:180:12)
+    at async handleDefaultDeploy (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/commands/deploy/index.js:1615:18)
+    at async _Span.trace (/Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/@vercel/build-utils/dist/index.js:32191:14)
+    at async main (file:///Users/netanelyosef/.npm/_npx/69f9afb961c37556/node_modules/vercel/dist/index.js:24394:18)
+Error: Command "npm run build" exited with 1
+> [debug] [2026-04-26T17:07:44.299Z] Failed to send telemetry events. Unexpected response from telemetry server: 401
+> [debug] [2026-04-26T17:07:44.347Z] Telemetry subprocess exited with code 0

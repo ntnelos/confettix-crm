@@ -58,6 +58,12 @@ export default function ContactDetailsPage() {
   const [editAddressId, setEditAddressId] = useState<string | null>(null)
   const [addrForm, setAddrForm] = useState({ label: '', street: '', city: '', zip_code: '', notes: '' })
 
+  // Inquiries (contact_inquiries) State
+  const [inquiries, setInquiries] = useState<any[]>([])
+  const [showInquiryForm, setShowInquiryForm] = useState(false)
+  const [newInquiry, setNewInquiry] = useState({ source: 'website' as string, message: '' })
+  const [savingInquiry, setSavingInquiry] = useState(false)
+
   useEffect(() => {
     async function loadData() {
       const contactRes: any = await supabase.from('contacts').select('*, organizations(id, name)').eq('id', id).single()
@@ -98,6 +104,13 @@ export default function ContactDetailsPage() {
           }
         }
       }
+
+      // Fetch inquiries history
+      const { data: inqs } = await (supabase.from('contact_inquiries') as any)
+        .select('*')
+        .eq('contact_id', c.id)
+        .order('created_at', { ascending: false })
+      if (inqs) setInquiries(inqs)
       
       setLoading(false)
     }
@@ -214,6 +227,23 @@ export default function ContactDetailsPage() {
     if (!window.confirm('למחוק כתובת זו?')) return
     const { error } = await (supabase.from('delivery_addresses') as any).delete().eq('id', addrId)
     if (!error) setAddresses(prev => prev.filter(a => a.id !== addrId))
+  }
+
+  const handleSaveInquiry = async () => {
+    if (!newInquiry.message.trim()) return
+    setSavingInquiry(true)
+    const { data, error } = await (supabase.from('contact_inquiries') as any)
+      .insert({ contact_id: id, source: newInquiry.source, message: newInquiry.message.trim() })
+      .select()
+      .single()
+    if (data) {
+      setInquiries(prev => [data, ...prev])
+      setNewInquiry({ source: 'website', message: '' })
+      setShowInquiryForm(false)
+    } else if (error) {
+      alert(`שגיאה בשמירה: ${error.message}`)
+    }
+    setSavingInquiry(false)
   }
 
   if (loading) {
@@ -422,8 +452,8 @@ export default function ContactDetailsPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
-                           <div style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'white', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)', border: '1px solid ' + (opp.status === 'won' ? '#86efac' : opp.status === 'lost' ? '#fecaca' : 'var(--border)') }}>
-                             {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'בטיפול' : opp.status === 'won' ? 'זכייה' : 'בוטל'}
+                           <div style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'pending_payment' ? '#eef2ff' : opp.status === 'paid' ? '#ccfbf1' : opp.status === 'lost' ? '#fee2e2' : 'white', color: opp.status === 'won' ? '#166534' : opp.status === 'pending_payment' ? '#3730a3' : opp.status === 'paid' ? '#115e59' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)', border: '1px solid ' + (opp.status === 'won' ? '#86efac' : opp.status === 'pending_payment' ? '#c7d2fe' : opp.status === 'paid' ? '#99f6e4' : opp.status === 'lost' ? '#fecaca' : 'var(--border)') }}>
+                             {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'במעקב' : opp.status === 'won' ? 'זכייה' : opp.status === 'pending_payment' ? 'ממתין לתשלום' : opp.status === 'paid' ? 'סגור/שולם' : opp.status === 'lost' ? 'בוטל' : opp.status}
                            </div>
                         </div>
                       </Link>
@@ -464,6 +494,85 @@ export default function ContactDetailsPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+
+            {/* ══════ Inquiry History Card ══════ */}
+            <div className="card">
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>💌 היסטוריית פניות ({inquiries.length})</h2>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => setShowInquiryForm((v: boolean) => !v)}
+                >
+                  {showInquiryForm ? '✕ ביטול' : '+ הוסף פניה'}
+                </button>
+              </div>
+
+              {showInquiryForm && (
+                <div style={{ padding: '0 20px 16px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
+                    {['website', 'whatsapp', 'phone', 'meeting', 'email', 'note'].map(src => {
+                      const labels: Record<string, string> = {
+                        website: '🌐 אתר', whatsapp: '💬 WhatsApp', phone: '📞 שיחה',
+                        meeting: '🤝 פגישה', email: '📧 אימייל', note: '📝 הערה'
+                      }
+                      return (
+                        <button
+                          key={src}
+                          onClick={() => setNewInquiry((p: any) => ({ ...p, source: src }))}
+                          style={{
+                            padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                            border: '1px solid',
+                            borderColor: newInquiry.source === src ? 'var(--pink)' : 'var(--border)',
+                            background: newInquiry.source === src ? 'var(--pink)' : 'transparent',
+                            color: newInquiry.source === src ? 'white' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {labels[src]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <textarea
+                    className="form-input"
+                    rows={3}
+                    placeholder="כתוב כאן את תוכן הפניה..."
+                    value={newInquiry.message}
+                    onChange={e => setNewInquiry((p: any) => ({ ...p, message: e.target.value }))}
+                    style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.6 }}
+                  />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button className="btn btn-primary btn-sm" onClick={handleSaveInquiry} disabled={savingInquiry}>
+                      {savingInquiry ? <span className="spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} /> : 'שמור פניה'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ padding: 20 }}>
+                {inquiries.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>אין פניות רשומות.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {inquiries.map((inq: any) => {
+                      const srcIcons: Record<string, string> = { website: '🌐', whatsapp: '💬', phone: '📞', meeting: '🤝', email: '📧', note: '📝' }
+                      const srcColors: Record<string, string> = { website: '#3b82f6', whatsapp: '#25D366', phone: '#f59e0b', meeting: '#8b5cf6', email: '#6366f1', note: '#94a3b8' }
+                      return (
+                        <div key={inq.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px dashed var(--border-light)' }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: (srcColors[inq.source] || '#94a3b8') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                            {srcIcons[inq.source] || '📋'}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{inq.message}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{new Date(inq.created_at).toLocaleString('he-IL')}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

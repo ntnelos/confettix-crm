@@ -1,4 +1,5 @@
 import Sidebar from '@/components/layout/Sidebar'
+import LeadNotificationProvider from '@/components/LeadNotificationProvider'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="main-content">
         {children}
       </div>
+      <LeadNotificationProvider />
     </div>
   )
 }

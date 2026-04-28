@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getMorningErrorMessage } from '@/lib/morning/errors'
 
 const getServiceClient = () =>
   createClient(
@@ -116,9 +117,32 @@ export async function POST(request: NextRequest) {
       })
 
       if (!clientRes.ok) {
-        const err = await clientRes.text()
-        console.error('Morning Client Create Error:', err)
-        return NextResponse.json({ error: 'Failed to create client in Morning API' }, { status: 500 })
+        const errText = await clientRes.text()
+        let errorCode: any = null
+        let translatedError = ''
+        
+        try {
+          const parsed = JSON.parse(errText)
+          errorCode = parsed.errorCode || parsed.code
+          if (errorCode) {
+            translatedError = getMorningErrorMessage(errorCode)
+          }
+        } catch (e) {}
+
+        console.error('Morning Client Create Error:', errText)
+        
+        // Log to DB
+        await supabase.from('system_logs').insert({
+          level: 'error',
+          service: 'morning_api',
+          message: translatedError || 'Failed to create client',
+          details: { error: errText, errorCode, payload: clientPayload, orderId }
+        })
+
+        return NextResponse.json({ 
+          error: translatedError || 'Failed to create client in Morning API', 
+          details: errText 
+        }, { status: 500 })
       }
 
       const clientData = await clientRes.json()
@@ -228,9 +252,29 @@ export async function POST(request: NextRequest) {
     })
 
     if (!docRes.ok) {
-      const err = await docRes.text()
-      console.error('Morning Document Create Error:', err)
-      return NextResponse.json({ error: `Failed to create document: ${err}` }, { status: 500 })
+      const errText = await docRes.text()
+      let errorCode: any = null
+      let translatedError = ''
+      
+      try {
+        const parsed = JSON.parse(errText)
+        errorCode = parsed.errorCode || parsed.code
+        if (errorCode) {
+          translatedError = getMorningErrorMessage(errorCode)
+        }
+      } catch (e) {}
+
+      console.error('Morning Document Create Error:', errText)
+      
+      // Log to DB
+      await supabase.from('system_logs').insert({
+        level: 'error',
+        service: 'morning_api',
+        message: translatedError || 'Failed to create document',
+        details: { error: errText, errorCode, payload: docPayload, orderId }
+      })
+
+      return NextResponse.json({ error: translatedError || `Failed to create document: ${errText}` }, { status: 500 })
     }
 
     const docData = await docRes.json()
@@ -255,10 +299,20 @@ export async function POST(request: NextRequest) {
     console.log('Morning docData:', JSON.stringify(docData, null, 2))
 
     const { data: insertedInvoice, error: invError } = await supabase.from('invoices').insert(newInvoice).select().single()
-
+    
     if (invError) {
       console.error('Insert Invoice Error:', invError)
       return NextResponse.json({ error: 'Created in Morning, but failed to save in DB.', details: invError }, { status: 500 })
+    }
+
+    // 5. Update Opportunity Status to 'pending_payment'
+    const { error: oppUpdateErr } = await supabase
+      .from('opportunities')
+      .update({ status: 'pending_payment' })
+      .eq('id', order.opportunity_id)
+
+    if (oppUpdateErr) {
+      console.warn('Failed to update opportunity status to pending_payment:', oppUpdateErr.message)
     }
 
     return NextResponse.json({ success: true, invoice: insertedInvoice, docData })

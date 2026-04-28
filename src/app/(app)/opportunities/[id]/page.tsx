@@ -16,6 +16,7 @@ interface Opportunity {
   lead_source: string | null
   description: string | null
   expected_delivery: string | null
+  payment_date: string | null
   created_at: string
   contacts?: { id: string, name: string } | null
   organizations?: { id: string, name: string } | null
@@ -46,6 +47,7 @@ export default function OpportunityDetailsPage() {
   
   // Invoice State
   const [invoice, setInvoice] = useState<any>(null)
+  const [receipt, setReceipt] = useState<any>(null)
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [existingInvoiceUrl, setExistingInvoiceUrl] = useState('')
@@ -91,9 +93,13 @@ export default function OpportunityDetailsPage() {
       setSignedOrder(orderData)
       const typedOrder = orderData as any
       if (typedOrder.invoices && typedOrder.invoices.length > 0) {
-        setInvoice(typedOrder.invoices[0])
+        const inv = typedOrder.invoices.find((i: any) => i.type === 'invoice' || i.type === '305' || !i.type)
+        setInvoice(inv || null)
+        const rec = typedOrder.invoices.find((i: any) => i.type === 'receipt' || i.type === '400')
+        setReceipt(rec || null)
       } else {
         setInvoice(null) // Reset if no invoices
+        setReceipt(null)
       }
       if (typedOrder.delivery_address_id) {
         const { data: addr } = await supabase.from('delivery_addresses').select('*').eq('id', typedOrder.delivery_address_id).single()
@@ -104,6 +110,7 @@ export default function OpportunityDetailsPage() {
     } else {
       setSignedOrder(null)
       setInvoice(null)
+      setReceipt(null)
       setDeliveryAddress(null)
     }
     
@@ -173,8 +180,12 @@ export default function OpportunityDetailsPage() {
         body: JSON.stringify({ orderId: signedOrder.id })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to generate invoice')
-      
+      if (!res.ok) {
+        const errMsg = data.error || 'Failed to generate invoice'
+        const details = data.details ? ` - ${data.details}` : ''
+        throw new Error(errMsg + details)
+      }
+      await updateField('status', 'pending_payment')
       setInvoice(data.invoice)
       await loadData()
       alert('חשבונית מס הופקה בהצלחה!')
@@ -202,6 +213,7 @@ export default function OpportunityDetailsPage() {
 
       if (error) throw error
       
+      await updateField('status', 'pending_payment')
       setInvoice(data)
       await loadData()
       setShowInvoiceModal(false)
@@ -312,7 +324,7 @@ export default function OpportunityDetailsPage() {
             { id: 'followup', label: 'פולואפ / בטיפול' },
             { id: 'won', label: 'זכייה / מאושר' },
             { id: 'pending_payment', label: 'ממתין לתשלום' },
-            { id: 'paid', label: 'שולם' },
+            { id: 'paid', label: 'סגור/שולם' },
             { id: 'lost', label: 'לא נסגר / בוטל' }
           ].map((step, idx, arr) => {
              const activeIndex = arr.findIndex(s => s.id === opp.status)
@@ -383,7 +395,7 @@ export default function OpportunityDetailsPage() {
 
             {/* Quotes Builder */}
             <div className="card" style={{ overflow: 'visible' }}>
-               <QuotesManager opportunityId={opp.id} onOrderUpdated={loadData} />
+               <QuotesManager opportunityId={opp.id} paymentDate={opp.payment_date} onOrderUpdated={loadData} />
             </div>
 
             {/* Updates / History Card */}
@@ -501,6 +513,13 @@ export default function OpportunityDetailsPage() {
                     </select>
                   </div>
 
+                  <InlineEditableField
+                    label="תאריך תשלום"
+                    value={opp.payment_date?.toString() || ''}
+                    type="date"
+                    onSave={val => updateField('payment_date', val)}
+                  />
+
                 </div>
                 
                 <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed var(--border-strong)' }}>
@@ -535,7 +554,7 @@ export default function OpportunityDetailsPage() {
               </div>
             </div>
 
-            {signedOrder && (
+            {signedOrder && (signedOrder.status === 'signed' || signedOrder.status === 'paid' || invoice) && (
               <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1px solid #86efac' }}>
                 <div className="card-header" style={{ borderBottom: '1px solid rgba(76, 175, 80, 0.2)', paddingBottom: 12 }}>
                   <h2 style={{ fontSize: 15, fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -560,7 +579,7 @@ export default function OpportunityDetailsPage() {
             )}
 
             {/* INVOICE BLOCK */}
-            {signedOrder && (
+            {signedOrder && (signedOrder.status === 'signed' || signedOrder.status === 'paid' || invoice) && (
               <div className="card" style={{ background: 'var(--surface)' }}>
                 <div className="card-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                   <h2 style={{ fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -590,12 +609,48 @@ export default function OpportunityDetailsPage() {
                      </>
                    ) : (
                      <button
-                        onClick={() => setShowInvoiceModal(true)}
+                        onClick={() => {
+                          if (!opp?.payment_date) {
+                            alert('נא למלא "תאריך תשלום" בפרטי ההזדמנות לפני הפקת חשבונית וסגירת עסקה.');
+                            return;
+                          }
+                          setShowInvoiceModal(true);
+                        }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#3730A3', border: 'none', color: 'white', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', width: '100%' }}
                      >
                         📄 חשבונית מס
                      </button>
                    )}
+                </div>
+              </div>
+            )}
+
+            {/* RECEIPT BLOCK */}
+            {receipt && (
+              <div className="card" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                <div className="card-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, color: '#334155' }}>
+                    ✅ קבלה הופקה
+                  </h2>
+                </div>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <strong>מספר מסמך:</strong>
+                    <span>{receipt.invoice_number || receipt.green_invoice_id}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <strong>תאריך:</strong>
+                    <span>{receipt.issued_at ? new Date(receipt.issued_at).toLocaleDateString('he-IL') : 'לא צוין'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <strong>סכום מתקבל:</strong>
+                    <span style={{ fontWeight: 600 }}>₪{parseFloat(receipt.amount || 0).toLocaleString()}</span>
+                  </div>
+                  {receipt.pdf_url && (
+                    <a target="_blank" rel="noreferrer" href={receipt.pdf_url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: '#e2e8f0', color: '#0f172a', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
+                      👁️ צפייה בקבלה (PDF)
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -697,7 +752,7 @@ function StatusBadge({ status }: { status: string }) {
    if (status === 'followup') return <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600, border: '1px solid white' }}>בטיפול / פולואפ</span>
    if (status === 'won') return <span style={{ background: '#4caf50', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>זכייה / מאושר</span>
    if (status === 'pending_payment') return <span style={{ background: '#3f51b5', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>ממתין לתשלום</span>
-   if (status === 'paid') return <span style={{ background: '#009688', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>שולם</span>
+   if (status === 'paid') return <span style={{ background: '#009688', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>סגור/שולם</span>
    if (status === 'lost') return <span style={{ background: '#e53935', color: 'white', padding: '4px 10px', borderRadius: 16, fontSize: 12, fontWeight: 600 }}>לא נסגר / בוטל</span>
    return <span>{status}</span>
 }

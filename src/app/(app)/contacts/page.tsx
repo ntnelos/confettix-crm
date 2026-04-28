@@ -24,74 +24,67 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const pageSize = 50
+  const [sortColumn, setSortColumn] = useState('created_at')
+  const [sortAscending, setSortAscending] = useState(false)
 
-  const fetchContacts = async () => {
-    setLoading(true)
-    let allData: Contact[] = []
-    let total = 0
-    let from = 0
-    const step = 1000
+  const fetchContacts = async (query = '', pageNum = 0, isLoadMore = false, col = sortColumn, asc = sortAscending) => {
+    if (isLoadMore) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+    
+    let dbQuery = supabase
+      .from('contacts')
+      .select('*, organizations(name)', { count: 'exact' })
 
-    while (true) {
-      const { data, error, count } = await supabase
-        .from('contacts')
-        .select('*, organizations(name)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, from + step - 1)
-
-      if (error) {
-        console.error('Error fetching contacts:', error)
-        break
-      }
-
-      if (count !== null && total === 0) {
-        total = count
-        setTotalCount(count)
-      }
-
-      if (data && data.length > 0) {
-        allData = [...allData, ...(data as Contact[])]
-        from += data.length
-        if (data.length < step) break // Reached the end
-      } else {
-        break
-      }
+    if (query) {
+      dbQuery = dbQuery.or(`name.ilike.%${query}%,email.ilike.%${query}%,mobile.ilike.%${query}%,phone.ilike.%${query}%,notes.ilike.%${query}%`)
     }
 
-    // Deduplicate by ID just to be absolutely safe against React warnings
-    const uniqueMap = new Map<string, Contact>()
-    allData.forEach(c => {
-      if (!uniqueMap.has(c.id)) {
-        uniqueMap.set(c.id, c)
+    if (col === 'organization') {
+      // PostgREST doesn't support ordering by related table out of the box easily, so we order by organization_id
+      dbQuery = dbQuery.order('organization_id', { ascending: asc }).order('id', { ascending: true })
+    } else {
+      dbQuery = dbQuery.order(col, { ascending: asc }).order('id', { ascending: true })
+    }
+
+    dbQuery = dbQuery.range(pageNum * pageSize, (pageNum + 1) * pageSize - 1)
+
+    const { data, error, count } = await dbQuery
+
+    if (count !== null) setTotalCount(count)
+    if (!error && data) {
+      if (isLoadMore) {
+        setContacts(prev => {
+          const existingIds = new Set(prev.map(c => c.id))
+          const newContacts = (data as Contact[]).filter(c => !existingIds.has(c.id))
+          return [...prev, ...newContacts]
+        })
+      } else {
+        setContacts(data as Contact[])
       }
-    })
-    
-    setContacts(Array.from(uniqueMap.values()))
-    setLoading(false)
+    }
+    if (isLoadMore) {
+      setLoadingMore(false)
+    } else {
+      setLoading(false)
+    }
   }
 
-  useEffect(() => { fetchContacts() }, [])
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setPage(0)
+      fetchContacts(search, 0, false, sortColumn, sortAscending)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [search]) // We deliberately don't include sortColumn and sortAscending here because handleSort calls fetchContacts directly
 
-  const filtered = contacts.filter(c => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    const name = (c.name || '').toLowerCase()
-    const email = (c.email || '').toLowerCase()
-    const mobile = (c.mobile || '').toLowerCase()
-    const phone = (c.phone || '').toLowerCase()
-    const orgName = ((c.organizations as any)?.name || '').toLowerCase()
-    const notes = (c.notes || '').toLowerCase()
-
-    return (
-      name.includes(q) ||
-      email.includes(q) ||
-      mobile.includes(q) ||
-      phone.includes(q) ||
-      orgName.includes(q) ||
-      notes.includes(q)
-    )
-  })
+  const filtered = contacts
 
   const handleDeleteContact = async (id: string, name: string) => {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את איש הקשר "${name}" לצמיתות?`)) return
@@ -102,6 +95,25 @@ export default function ContactsPage() {
     } else {
       alert(`שגיאה במחיקת איש קשר: ${error.message}`)
     }
+  }
+
+  const handleSort = (col: string) => {
+    const isAsc = sortColumn === col ? !sortAscending : true
+    setSortColumn(col)
+    setSortAscending(isAsc)
+    setPage(0)
+    fetchContacts(search, 0, false, col, isAsc)
+  }
+
+  const loadMore = () => {
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchContacts(search, nextPage, true, sortColumn, sortAscending)
+  }
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) return <span style={{ opacity: 0.3, fontSize: '0.8em', marginLeft: 4 }}>↕</span>
+    return <span style={{ fontSize: '0.8em', marginLeft: 4, color: 'var(--pink)' }}>{sortAscending ? '↑' : '↓'}</span>
   }
 
   return (
@@ -132,52 +144,53 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <span className="spinner" style={{ width: 28, height: 28 }} />
-          </div>
-        ) : contacts.length === 0 && !search ? (
-          <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>👥</div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--text-secondary)' }}>
-              אין אנשי קשר עדיין
-            </h2>
-            <p className="text-muted" style={{ marginBottom: 20 }}>הוסף את איש הקשר הראשון כדי להתחיל</p>
-            <Link href="/contacts/new" className="btn btn-primary">הוסף איש קשר</Link>
-          </div>
-        ) : (
-          <div className="table-container">
-            <div className="table-toolbar">
-              <div className="search-field">
-                <SearchIcon />
-                <input
-                  type="text"
-                  placeholder="חיפוש שם, מייל, טלפון, ארגון..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="text-muted">
-                {search
-                  ? `${filtered.length} תוצאות מתוך ${totalCount} אנשי קשר`
-                  : `סה"כ ${totalCount} אנשי קשר`
-                }
-              </div>
+        <div className="table-container">
+          <div className="table-toolbar">
+            <div className="search-field">
+              <SearchIcon />
+              <input
+                type="text"
+                placeholder="חיפוש שם, מייל, טלפון, ארגון..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
+            <div className="text-muted">
+              {search
+                ? `${filtered.length} תוצאות מתוך ${totalCount} אנשי קשר`
+                : `סה"כ ${totalCount} אנשי קשר`
+              }
+            </div>
+          </div>
 
-            <table>
+          {loading && contacts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <span className="spinner" style={{ width: 28, height: 28 }} />
+            </div>
+          ) : contacts.length === 0 && !search ? (
+            <div className="card" style={{ textAlign: 'center', padding: '60px 20px', boxShadow: 'none', border: 'none', background: 'transparent' }}>
+              <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>👥</div>
+              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--text-secondary)' }}>
+                אין אנשי קשר עדיין
+              </h2>
+              <p className="text-muted" style={{ marginBottom: 20 }}>הוסף את איש הקשר הראשון כדי להתחיל</p>
+              <Link href="/contacts/new" className="btn btn-primary">הוסף איש קשר</Link>
+            </div>
+          ) : (
+            <>
+              <table>
               <thead>
                 <tr>
-                  <th>שם</th>
-                  <th>ארגון</th>
-                  <th>אימייל</th>
-                  <th>נייד</th>
-                  <th>טלפון</th>
-                  <th>דיוור</th>
+                  <th onClick={() => handleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>שם <SortIcon column="name" /></th>
+                  <th onClick={() => handleSort('organization')} style={{ cursor: 'pointer', userSelect: 'none' }}>ארגון <SortIcon column="organization" /></th>
+                  <th onClick={() => handleSort('email')} style={{ cursor: 'pointer', userSelect: 'none' }}>אימייל <SortIcon column="email" /></th>
+                  <th onClick={() => handleSort('mobile')} style={{ cursor: 'pointer', userSelect: 'none' }}>נייד <SortIcon column="mobile" /></th>
+                  <th onClick={() => handleSort('phone')} style={{ cursor: 'pointer', userSelect: 'none' }}>טלפון <SortIcon column="phone" /></th>
+                  <th onClick={() => handleSort('unsubscribed')} style={{ cursor: 'pointer', userSelect: 'none' }}>דיוור <SortIcon column="unsubscribed" /></th>
                   <th>פעולות</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
@@ -259,16 +272,31 @@ export default function ContactsPage() {
               </tbody>
             </table>
 
-            <div className="table-pagination">
-              <div className="text-muted" style={{ fontSize: 13 }}>
-                {search
-                  ? `${filtered.length} תוצאות מתוך ${totalCount} אנשי קשר`
-                  : `סה"כ ${totalCount} אנשי קשר`
-                }
+            {contacts.length < totalCount && (
+              <div className="table-pagination" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px 0' }}>
+                <div className="text-muted" style={{ fontSize: 13 }}>
+                  מציג {contacts.length} מתוך {totalCount} אנשי קשר
+                </div>
+                <button 
+                  onClick={loadMore} 
+                  disabled={loadingMore}
+                  className="btn btn-secondary"
+                  style={{ minWidth: 120, display: 'flex', justifyContent: 'center' }}
+                >
+                  {loadingMore ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'טען עוד'}
+                </button>
               </div>
-            </div>
-          </div>
-        )}
+            )}
+            {contacts.length >= totalCount && totalCount > 0 && (
+              <div className="table-pagination" style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                <div className="text-muted" style={{ fontSize: 13 }}>
+                  מציג את כל {totalCount} אנשי הקשר
+                </div>
+              </div>
+            )}
+            </>
+          )}
+        </div>
       </div>
     </>
   )

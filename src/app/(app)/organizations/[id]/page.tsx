@@ -12,6 +12,7 @@ const GlobeIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 const InfoIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
 const UsersIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
 const PlusIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+const ExternalLinkIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
 
 interface Organization {
   id: string
@@ -417,8 +418,8 @@ export default function OrganizationDetailsPage() {
                          </div>
                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                             <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>₪{parseFloat(opp.calculated_value || 0).toLocaleString()}</div>
-                            <div style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'lost' ? '#fee2e2' : 'white', color: opp.status === 'won' ? '#166534' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)', border: '1px solid ' + (opp.status === 'won' ? '#86efac' : opp.status === 'lost' ? '#fecaca' : 'var(--border)') }}>
-                              {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'בטיפול' : opp.status === 'won' ? 'זכייה' : 'בוטל'}
+                            <div style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, fontWeight: 700, background: opp.status === 'won' ? '#dcfce7' : opp.status === 'pending_payment' ? '#eef2ff' : opp.status === 'paid' ? '#ccfbf1' : opp.status === 'lost' ? '#fee2e2' : 'white', color: opp.status === 'won' ? '#166534' : opp.status === 'pending_payment' ? '#3730a3' : opp.status === 'paid' ? '#115e59' : opp.status === 'lost' ? '#991b1b' : 'var(--text-secondary)', border: '1px solid ' + (opp.status === 'won' ? '#86efac' : opp.status === 'pending_payment' ? '#c7d2fe' : opp.status === 'paid' ? '#99f6e4' : opp.status === 'lost' ? '#fecaca' : 'var(--border)') }}>
+                              {opp.status === 'new' ? 'חדש' : opp.status === 'followup' ? 'במעקב' : opp.status === 'won' ? 'זכייה' : opp.status === 'pending_payment' ? 'ממתין לתשלום' : opp.status === 'paid' ? 'סגור/שולם' : opp.status === 'lost' ? 'בוטל' : opp.status}
                             </div>
                          </div>
                        </Link>
@@ -459,6 +460,34 @@ export default function OrganizationDetailsPage() {
                   dir="ltr"
                   onSave={(val) => updateOrgField('morning_id', val)}
                 />
+
+                {org.morning_id && (
+                  <a
+                    href={`https://app.greeninvoice.co.il/incomes/clients/${org.morning_id}/documents`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginTop: -8,
+                      marginBottom: 16,
+                      padding: '8px 12px',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      color: '#059669',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <ExternalLinkIcon />
+                    כרטיס לקוח ב-Morning
+                  </a>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <InlineEditableField

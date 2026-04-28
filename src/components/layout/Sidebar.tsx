@@ -15,6 +15,7 @@ const navItems = [
   { href: '/quotes', label: 'הצעות מחיר', icon: FileTextIcon },
   { href: '/orders', label: 'הזמנות', icon: ShoppingBagIcon },
   { href: '/invoices', label: 'חשבוניות', icon: ReceiptIcon },
+  { href: '/inventory', label: 'ניהול מלאי', icon: PackageIcon },
 ]
 
 export default function Sidebar() {
@@ -24,6 +25,7 @@ export default function Sidebar() {
   const [userName, setUserName] = useState('')
   const [userInitial, setUserInitial] = useState('?')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -34,6 +36,11 @@ export default function Sidebar() {
       }
     })
   }, [])
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,24 +59,54 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <div className="sidebar-logo">
-        <img
-          src="https://cdn.confettix.co.il/wp-content/uploads/logo-confettix-1.webp?strip=all&lossy=1&ssl=1"
-          alt="קונפטיקס"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-            e.currentTarget.nextElementSibling?.setAttribute('style', 'display:flex')
-          }}
-        />
-        <span style={{ display: 'none', color: 'var(--pink)', fontWeight: 800, fontSize: 20 }}>
-          קונפטיקס
-        </span>
-        <span className="sidebar-logo-sub">Confettix CRM</span>
+    <>
+      {/* Mobile Header */}
+      <div className="mobile-header">
+        <button className="hamburger-btn" onClick={() => setIsMobileOpen(true)} aria-label="Open menu">
+          <MenuIcon />
+        </button>
+        <div className="mobile-header-logo">
+          <img
+            src="https://cdn.confettix.co.il/wp-content/uploads/logo-confettix-1.webp?strip=all&lossy=1&ssl=1"
+            alt="קונפטיקס"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        </div>
       </div>
 
-      {/* Navigation */}
+      {/* Overlay */}
+      <div 
+        className={`sidebar-overlay ${isMobileOpen ? 'show' : ''}`} 
+        onClick={() => setIsMobileOpen(false)} 
+      />
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${isMobileOpen ? 'open' : ''}`}>
+        {/* Logo */}
+        <div className="sidebar-logo">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            {/* Close button for mobile */}
+            <button className="hamburger-btn" onClick={() => setIsMobileOpen(false)} style={{ display: 'var(--mobile-close-display, none)' }}>
+              <XIcon />
+            </button>
+            <img
+              src="https://cdn.confettix.co.il/wp-content/uploads/logo-confettix-1.webp?strip=all&lossy=1&ssl=1"
+              alt="קונפטיקס"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling?.setAttribute('style', 'display:flex')
+              }}
+            />
+          </div>
+          <span style={{ display: 'none', color: 'var(--pink)', fontWeight: 800, fontSize: 20 }}>
+            קונפטיקס
+          </span>
+          <span className="sidebar-logo-sub">Confettix CRM</span>
+        </div>
+
+        {/* Navigation */}
       <nav className="sidebar-nav">
         <button 
           onClick={() => setSearchOpen(true)}
@@ -126,8 +163,14 @@ export default function Sidebar() {
           border-color: var(--pink) !important;
           color: var(--pink) !important;
         }
+        @media (max-width: 900px) {
+          .sidebar-logo .hamburger-btn {
+            display: flex !important;
+          }
+        }
       `}} />
-    </aside>
+      </aside>
+    </>
   )
 }
 
@@ -226,6 +269,35 @@ function SettingsIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  )
+}
+
+function PackageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   )
 }

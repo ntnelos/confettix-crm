@@ -50,6 +50,7 @@ function NewOpportunityFormImpl() {
     lead_source: '',
     description: '',
     expected_delivery: '',
+    payment_date: '',
   })
 
   // Initial load of latest items (small batch)
@@ -139,6 +140,7 @@ function NewOpportunityFormImpl() {
             lead_source: data.lead_source || '',
             description: data.description || '',
             expected_delivery: data.expected_delivery || '',
+            payment_date: data.payment_date || '',
           })
           if (data.contacts?.name) setSelectedContactName(data.contacts.name)
           if (data.organizations?.name) setSelectedOrgName(data.organizations.name)
@@ -251,6 +253,7 @@ function NewOpportunityFormImpl() {
       lead_source: form.lead_source || null,
       description: form.description || null,
       expected_delivery: form.expected_delivery || null,
+      payment_date: form.payment_date || null,
     }
 
     let sbError;
@@ -285,10 +288,7 @@ function NewOpportunityFormImpl() {
   return (
     <>
       <div className="topbar">
-        <div className="topbar-search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-          <input type="text" placeholder="חיפוש..." disabled />
-        </div>
+        <div />
       </div>
 
       <div className="page-body">
@@ -430,6 +430,17 @@ function NewOpportunityFormImpl() {
                         type="date"
                         value={form.expected_delivery}
                         onChange={e => set('expected_delivery', e.target.value)}
+                        style={{ padding: '7px 10px' }}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>תאריך תשלום</label>
+                      <input
+                        className="form-input"
+                        type="date"
+                        value={form.payment_date}
+                        onChange={e => set('payment_date', e.target.value)}
                         style={{ padding: '7px 10px' }}
                       />
                     </div>

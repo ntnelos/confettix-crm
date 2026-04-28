@@ -30,7 +30,7 @@ export default function OrderCheckoutPage() {
   // Form state
   const [invoiceCompany, setInvoiceCompany] = useState('')
   const [companyNumber, setCompanyNumber] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer') // 'bank_transfer' | 'check_delivery'
+  const [paymentMethod, setPaymentMethod] = useState('bank_transfer')
 
   // Address State
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
@@ -53,7 +53,6 @@ export default function OrderCheckoutPage() {
         const json = await res.json()
         setData(json)
 
-        // Pre-fill
         if (json.order.invoice_company_name || json.org?.invoice_company_name) {
           setInvoiceCompany(json.order.invoice_company_name || json.org?.invoice_company_name || '')
         } else if (json.org?.name) {
@@ -86,7 +85,6 @@ export default function OrderCheckoutPage() {
           setExpectedDelivery(json.expected_delivery)
         }
 
-        // If order is signed and has signature, pre-fill it for preview
         if (json.order?.signature_data) {
           setSignature(json.order.signature_data)
         }
@@ -151,6 +149,27 @@ export default function OrderCheckoutPage() {
     }
   }
 
+  const handleWhatsAppShare = () => {
+    const phone = window.prompt('הזן מספר וואטסאפ (לדוגמה: 0501234567):', contactPhone);
+    if (phone) {
+      let cleanPhone = phone.replace(/[^\d+]/g, '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '972' + cleanPhone.substring(1);
+      }
+
+      const orgNameText = data?.org?.name ? ` - ${data.org.name}` : '';
+      const text = `הצעת מחיר${orgNameText}
+לינק להזמנה:
+${window.location.href}
+
+ניתן לחתום דיגיטלית על המסמך
+בברכה,
+קונפטיקס`;
+
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  }
+
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Heebo,sans-serif' }}>טוען נתוני הזמנה...</div>
   if (error || !data) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Heebo,sans-serif' }}>{error || 'הזמנה לא נמצאה'}</div>
 
@@ -174,173 +193,288 @@ export default function OrderCheckoutPage() {
 
   return (
     <>
+      {isReadOnly && (
+        <div className="no-print" style={{ position: 'fixed', bottom: 30, left: 30, zIndex: 1000 }}>
+          <button onClick={() => window.print()} style={{ padding: '12px 24px', background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 50, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(236, 72, 153, 0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20 }}>🖨️</span>
+            הדפס / שמור כ-PDF
+          </button>
+        </div>
+      )}
       {/* ----------------- PRINT ONLY LAYOUT ----------------- */}
-      <div className="print-only-layout" style={{ display: isReadOnly ? 'block' : 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: isReadOnly ? '40px 20px' : 40, direction: 'rtl', margin: isReadOnly ? '0 auto' : '0', maxWidth: isReadOnly ? 800 : 'none', boxShadow: isReadOnly ? '0 0 40px rgba(0,0,0,0.1)' : 'none', minHeight: isReadOnly ? '100vh' : 'auto' }}>
-        {isReadOnly && (
-          <div className="no-print" style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 20px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>תצוגת מסמך (PDF)</span>
-            <button onClick={() => window.print()} style={{ padding: '6px 12px', background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}>
-              🖨️ הדפס / שמור כ-PDF
-            </button>
+      <div className="print-only-layout" style={{ display: isReadOnly ? 'block' : 'none', background: 'white', color: 'black', fontFamily: 'Heebo, sans-serif', padding: isReadOnly ? '40px 48px' : 40, direction: 'rtl', margin: isReadOnly ? '0 auto' : '0', maxWidth: isReadOnly ? 860 : 'none', boxShadow: isReadOnly ? '0 0 40px rgba(0,0,0,0.1)' : 'none', minHeight: isReadOnly ? '100vh' : 'auto' }}>
+
+        {/* Print Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #e93b7e', paddingBottom: 20, marginBottom: 28 }}>
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, margin: '0 0 4px', color: '#131b40' }}>הזמנה מס&apos; {quote?.quote_number || quoteId.substring(0, 4)}</h1>
+            <div style={{ fontSize: 14, color: '#555', fontWeight: 600 }}>לכבוד: {org?.name || 'לקוח מזדמן'}{contactName ? ` — ${contactName}` : ''}</div>
+            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
+              {new Date(quote?.created_at || new Date()).toLocaleDateString('he-IL')} {new Date(quote?.created_at || new Date()).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+            </div>
           </div>
-        )}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 40 }} />
+          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 52 }} />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>
-            לכבוד: {org?.name || 'לקוח מזדמן'} {contactName ? `- ${contactName}` : ''}
-          </div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>
-            {new Date(quote?.created_at || new Date()).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })} {new Date(quote?.created_at || new Date()).toLocaleDateString('he-IL')}
-          </div>
-        </div>
-
-        <h1 style={{ fontSize: 24, fontWeight: 900, textAlign: 'right', marginBottom: 30 }}>הזמנה מס' {quote?.quote_number || quoteId.substring(0, 4)}</h1>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 20, fontSize: 14 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24, fontSize: 14, borderRadius: 8, overflow: 'hidden' }}>
           <thead>
-            <tr style={{ background: '#b0b6bf', color: 'white' }}>
-              <th style={{ padding: 12, textAlign: 'right', fontWeight: 700 }}>מוצר</th>
-              <th style={{ padding: 12, textAlign: 'right', fontWeight: 700 }}>תיאור</th>
-              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>כמות</th>
-              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>מחיר</th>
-              <th style={{ padding: 12, textAlign: 'center', fontWeight: 700 }}>סה"כ</th>
+            <tr style={{ background: '#131b40', color: 'white' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>מוצר</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700 }}>תיאור</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, whiteSpace: 'nowrap' }}>כמות</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, whiteSpace: 'nowrap' }}>מחיר יח&apos;</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, whiteSpace: 'nowrap' }}>סה&quot;כ</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item: any) => (
-              <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: 12, fontWeight: 800 }}>{item.product_name}</td>
-                <td style={{ padding: 12 }}>{item.description || ''}</td>
-                <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
-                <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(item.unit_price).toFixed(2)}</td>
-                <td style={{ padding: 12, textAlign: 'center', fontWeight: 800 }}>₪{parseFloat(item.line_total).toFixed(2)}</td>
+            {items.map((item: any, idx: number) => (
+              <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                <td style={{ padding: '12px 16px', fontWeight: 700 }}>{item.product_name}</td>
+                <td style={{ padding: '12px 16px', color: '#555', fontSize: 13 }}>{item.description || ''}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'center' }}>₪{parseFloat(item.unit_price).toFixed(2)}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800 }}>₪{parseFloat(item.line_total).toFixed(2)}</td>
               </tr>
             ))}
-
-            <tr style={{ background: '#f1f5f9' }}>
-              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
-              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>סכום מוצרים</td>
-              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(quote?.subtotal || 0).toFixed(2)}</td>
-            </tr>
-            <tr style={{ background: '#f8fafc' }}>
-              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
-              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>משלוח</td>
-              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{parseFloat(quote?.shipping_cost || 0).toFixed(2)}</td>
-            </tr>
-            <tr style={{ background: '#f1f5f9' }}>
-              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
-              <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>מע"מ</td>
-              <td style={{ padding: 12, textAlign: 'center', fontWeight: 600 }}>₪{(((parseFloat(quote?.subtotal || 0) + parseFloat(quote?.shipping_cost || 0))) * 0.18).toFixed(2)}</td>
-            </tr>
-            <tr style={{ background: '#e2e8f0' }}>
-              <td colSpan={3} style={{ border: 'none', background: 'white' }}></td>
-              <td style={{ padding: 12, textAlign: 'right', fontWeight: 900, fontSize: 16 }}>סה"כ לתשלום</td>
-              <td style={{ padding: 12, textAlign: 'center', fontWeight: 900, fontSize: 16 }}>₪{calculateFinalTotal().toFixed(2)}</td>
-            </tr>
           </tbody>
         </table>
 
-        <div style={{ marginBottom: 40, marginTop: 20, fontSize: 13, lineHeight: 1.6, fontWeight: 700, paddingRight: 20 }}>
-          <ul style={{ listStyleType: 'disc' }}>
-            <li>התאמת עיצוב מעיצובים קיימים, תוספת מיתוג של שם אישי, הקדשה ולוגו ללא תוספת תשלום.</li>
-            <li>עיצוב חדש בהתאמה - 500 ש"ח</li>
-            <li>אני מאשר/ת קבלת דיוורים מקונפטיקס</li>
-          </ul>
-          <div style={{ marginTop: 8 }}>
-            תשלום בהעברה בנקאית עם אישור הצעת המחיר
+        {/* Totals block */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <div style={{ minWidth: 260, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', fontSize: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <span>סכום מוצרים</span><span style={{ fontWeight: 600 }}>₪{parseFloat(quote?.subtotal || 0).toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+              <span>משלוח</span><span style={{ fontWeight: 600 }}>₪{parseFloat(quote?.shipping_cost || 0).toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <span>מע&quot;מ (18%)</span><span style={{ fontWeight: 600 }}>₪{((parseFloat(quote?.subtotal || 0) + parseFloat(quote?.shipping_cost || 0)) * 0.18).toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#131b40', color: 'white' }}>
+              <span style={{ fontWeight: 800, fontSize: 15 }}>סה&quot;כ לתשלום</span>
+              <span style={{ fontWeight: 900, fontSize: 16 }}>₪{calculateFinalTotal().toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 30 }}>
-          <div style={{ background: '#b0b6bf', color: 'white', padding: '10px 16px', fontWeight: 800, fontSize: 16, marginBottom: 24, borderRadius: 4 }}>
-            פרטי ההזמנה שלכם (חובה למלא)
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32, fontSize: 15 }}>
-            <div>
-              <strong style={{ marginLeft: 8 }}>חשבונית על שם:</strong>
-              <span>{invoiceCompany || '______________________'}</span>
+        <div style={{ marginBottom: 40, marginTop: 20, fontSize: 13, lineHeight: 1.6, fontWeight: 700, pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>🎨</span>
+              <span>התאמת עיצוב מעיצובים קיימים, תוספת מיתוג של שם אישי, הקדשה ולוגו ללא תוספת תשלום.</span>
             </div>
-            <div>
-              <strong style={{ marginLeft: 8 }}>ח"פ:</strong>
-              <span>{companyNumber || '_________________'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>✨</span>
+              <span>עיצוב חדש בהתאמה - 500 ש"ח</span>
             </div>
-
-            <div>
-              <strong style={{ marginLeft: 8 }}>איש קשר לתיאום משלוח:</strong>
-              <span>{contactName || '______________________'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>📬</span>
+              <span>אני מאשר/ת קבלת דיוורים מקונפטיקס</span>
             </div>
-            <div>
-              <strong style={{ marginLeft: 8 }}>טלפון איש קשר:</strong>
-              <span>{contactPhone || '_________________'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>💳</span>
+              <span>תשלום בהעברה בנקאית עם אישור הצעת המחיר</span>
             </div>
-
-            <div>
-              <strong style={{ marginLeft: 8 }}>כתובת לאספקה:</strong>
-              <span>{selectedAddressId === 'new' ? (newAddress.street ? `${newAddress.street}, ${newAddress.city}` : '______________________') : (addresses.find(a => a.id === selectedAddressId)?.street ? `${addresses.find(a => a.id === selectedAddressId)?.street}, ${addresses.find(a => a.id === selectedAddressId)?.city}` : '______________________')}</span>
-            </div>
-            <div>
-              <strong style={{ marginLeft: 8 }}>תאריך לאספקה:</strong>
-              <span>{expectedDelivery ? new Date(expectedDelivery).toLocaleDateString('he-IL') : '_________________'}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 40, marginBottom: 32, fontSize: 15 }}>
-            <strong>צורת תשלום:</strong>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={paymentMethod === 'bank_transfer'} readOnly style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום בהעברה בנקאית</label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={paymentMethod === 'check_delivery'} readOnly style={{ width: 18, height: 18, accentColor: 'black' }} /> תשלום באמצעות צ'ק לשליח (תוספת 25 ש"ח)</label>
-          </div>
-
-          <div style={{ marginBottom: 40, fontSize: 15 }}>
-            <strong style={{ marginLeft: 8 }}>חתימה:</strong>
-            {signature ? (
-              <img src={signature} alt="Signature" style={{ height: 50, display: 'inline-block', verticalAlign: 'bottom' }} />
-            ) : (
-              <span style={{ display: 'inline-block', width: '300px', borderBottom: '1px solid black' }}></span>
-            )}
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 80, color: '#131b40', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 4 }}>בברכה,</div>
-          <div style={{ fontWeight: 900, fontSize: 24, marginBottom: 8 }}>קונפטיקס</div>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>מתנות ממותגות ומיתוג אירועים</div>
-          <div style={{ fontSize: 14, fontWeight: 700, direction: 'ltr' }}>052-8350600 | confettixparty@gmail.com</div>
-          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 60, marginTop: 12 }} />
+        <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <div style={{ background: '#131b40', color: 'white', padding: '8px 16px', fontWeight: 800, fontSize: 14 }}>
+            📋 פרטי ההזמנה
+          </div>
+
+          <div style={{ padding: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 16px', marginBottom: 16 }}>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>חשבונית על שם</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{invoiceCompany || '_________________'}</div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>ח&quot;פ / עוסק מורשה</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{companyNumber || '_________________'}</div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>איש קשר</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{contactName || '_________________'}</div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>טלפון</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{contactPhone || '_________________'}</div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>כתובת לאספקה</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedAddressId === 'new' ? (newAddress.street ? `${newAddress.street}, ${newAddress.city}` : '_________________') : (addresses.find(a => a.id === selectedAddressId)?.street ? `${addresses.find(a => a.id === selectedAddressId)?.street}, ${addresses.find(a => a.id === selectedAddressId)?.city}` : '_________________')}</div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+                <div style={{ color: '#64748b', fontSize: 11, marginBottom: 2, fontWeight: 600 }}>תאריך אספקה</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{expectedDelivery ? new Date(expectedDelivery).toLocaleDateString('he-IL') : '_________________'}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '10px 16px', borderRadius: 6, border: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', gap: 20, fontSize: 12 }}>
+                <strong style={{ color: '#64748b' }}>צורת תשלום:</strong>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}><input type="checkbox" checked={paymentMethod === 'bank_transfer'} readOnly style={{ width: 14, height: 14, accentColor: 'black' }} /> העברה בנקאית</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}><input type="checkbox" checked={paymentMethod === 'check_delivery'} readOnly style={{ width: 14, height: 14, accentColor: 'black' }} /> צ&apos;ק לשליח</label>
+              </div>
+
+              <div style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <strong style={{ color: '#64748b' }}>חתימה:</strong>
+                {signature ? (
+                  <img src={signature} alt="Signature" style={{ height: 40, display: 'inline-block' }} />
+                ) : (
+                  <span style={{ display: 'inline-block', width: '150px', borderBottom: '1px solid #cbd5e1' }}></span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 48, borderTop: '2px solid #e2e8f0', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#444' }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 15, color: '#131b40' }}>קונפטיקס — מתנות ממותגות ומיתוג אירועים</div>
+            <div style={{ fontSize: 13, marginTop: 2, direction: 'ltr', textAlign: 'right' }}>052-8350600 | confettixparty@gmail.com</div>
+          </div>
+          <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 44 }} />
         </div>
       </div>
       {/* ----------------- END PRINT ONLY LAYOUT ----------------- */}
 
       {!isReadOnly && (
-        <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
-          <main style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 32, alignItems: 'start' }}>
+        <>
+          <div className="send-toolbar no-print">
+            <span className="tb-label">פעולות:</span>
+            <button className="tb-btn green" onClick={handleWhatsAppShare}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.54 4.064 1.482 5.775L0 24l6.388-1.463A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.044-1.39l-.36-.214-3.733.854.876-3.648-.235-.374A9.818 9.818 0 0 1 12 2.182c5.42 0 9.818 4.398 9.818 9.818 0 5.42-4.398 9.818-9.818 9.818z" />
+              </svg>
+              ווצאפ
+            </button>
+            <button className="tb-btn blue" onClick={() => {
+              navigator.clipboard.writeText(window.location.href)
+              alert('הקישור הועתק ללוח!')
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              העתק קישור
+            </button>
+            <button className="tb-btn pink" onClick={() => window.print()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              הדפס / PDF
+            </button>
+          </div>
+          <div className="web-main-container" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '40px 20px', fontFamily: 'Heebo, sans-serif', color: '#1e293b' }}>
+            <main style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Left Side: Forms */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, minWidth: 0 }}>
               {/* Header */}
               <div className="no-print checkout-header" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <img src="/confettix-logo.png" alt="קונפטיקס" style={{ height: 50, marginBottom: 12 }} />
+                  <img src="/confettix-logo.png" alt="קונפטיקס" style={{ marginBottom: 12, maxWidth: 150, alignSelf: 'center' }} />
                   <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
                   <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>{data?.opp_subject || 'הזמנה'}&nbsp;<strong>{org.name}</strong></p>
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => window.print()} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    🖨️ הדפס
-                  </button>
-                  <button onClick={() => {
-                    navigator.clipboard.writeText(window.location.href)
-                    alert('הקישור הועתק ללוח!')
-                  }} style={{ padding: '8px 16px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    🔗 העתק קישור הזמנה
-                  </button>
+              </div>
+
+              {/* 🛒 Order Summary — shown first so customer knows what they're signing */}
+              <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20, color: '#131b40', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24 }}>🛒</span> פירוט ההזמנה
+                </h2>
+                {/* Desktop view: Table */}
+                <div className="desktop-only table-responsive-wrapper" style={{ overflowX: 'auto', marginBottom: 20 }}>
+                  <table className="desktop-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40%' }}>מוצר ותיאור</th>
+                        <th style={{ width: '15%', textAlign: 'center' }}>כמות</th>
+                        <th style={{ width: '20%', textAlign: 'center' }}>מחיר ליח׳</th>
+                        <th style={{ width: '25%', textAlign: 'center' }}>סה״כ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item: any) => (
+                        <tr key={item.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, fontSize: 15 }}>{item.product_name}</div>
+                            {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', marginTop: 4 }}>{item.description}</div>}
+                          </td>
+                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.quantity} יח׳</td>
+                          <td style={{ textAlign: 'center' }}>
+                            ₪{parseFloat(item.unit_price).toFixed(2)}
+                            {item.discount_percent > 0 && (
+                              <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>(-{item.discount_percent}%)</div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center', fontWeight: 700 }}>₪{parseFloat(item.line_total).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile view: Cards */}
+                <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px 8px', borderBottom: '2px solid #e2e8f0', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>פירוט פריטים</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>סה״כ</span>
+                  </div>
+                  {items.map((item: any) => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 14, borderBottom: '1px solid #f1f5f9', paddingBottom: 14, gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.product_name}</div>
+                        {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 4 }}>{item.description}</div>}
+                        <div style={{ color: '#000', fontSize: 13, fontWeight: 700 }}>
+                          {item.quantity} יח׳ 
+                          <span style={{ color: '#64748b', fontWeight: 400, marginRight: 8 }}>
+                            × ₪{parseFloat(item.unit_price).toFixed(2)}{item.discount_percent > 0 ? ` (-${item.discount_percent}%)` : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', marginTop: 2 }}>₪{parseFloat(item.line_total).toFixed(2)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderTop: '2px dashed #e2e8f0', paddingTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                    <span>סה״כ פריטים (לפני מע״מ)</span>
+                    <span>₪{parseFloat(quote.subtotal).toFixed(2)}</span>
+                  </div>
+                  {parseFloat(quote.shipping_cost) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                      <span>עלות שילוח (לפני מע״מ)</span>
+                      <span>₪{parseFloat(quote.shipping_cost).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {paymentMethod === 'check_delivery' && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#f59e0b', fontWeight: 600 }}>
+                      <span>תוספת צ׳ק לשליח (כולל מע״מ)</span>
+                      <span>₪25.00</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
+                    <span>מע״מ (18%)</span>
+                    <span>₪{((parseFloat(quote.subtotal) + parseFloat(quote.shipping_cost)) * 0.18).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 20, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
+                    <span>סה״כ לתשלום (כולל מע״מ)</span>
+                    <span style={{ color: '#4caf50' }}>₪{calculateFinalTotal().toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Form: Invoice details */}
+              {/* Form 1: Invoice details */}
               <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
@@ -385,7 +519,7 @@ export default function OrderCheckoutPage() {
                 </div>
               </div>
 
-              {/* Form: Delivery Date */}
+              {/* Form 2: Delivery Date */}
               <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
@@ -403,7 +537,7 @@ export default function OrderCheckoutPage() {
                 </div>
               </div>
 
-              {/* Form: Delivery */}
+              {/* Form 3: Delivery Address */}
               <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
@@ -454,7 +588,7 @@ export default function OrderCheckoutPage() {
                 )}
               </div>
 
-              {/* Form: Payment Method */}
+              {/* Form 4: Payment Method */}
               <div className="no-print" style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>4</span>
@@ -481,7 +615,7 @@ export default function OrderCheckoutPage() {
                 </div>
               </div>
 
-              {/* Form: Signature & Actions */}
+              {/* Form 5: Signature & Actions */}
               <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <h2 className="no-print" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ display: 'flex', width: 28, height: 28, background: '#f1f5f9', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>5</span>
@@ -502,86 +636,84 @@ export default function OrderCheckoutPage() {
                 </button>
               </div>
 
-            </div>
+            </main>
+          </div>
+        </>
+      )}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .send-toolbar {
+          position: sticky; top: 0; z-index: 100;
+          background: #0b1536; color: white;
+          padding: 12px 24px;
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          box-shadow: 0 2px 12px rgba(0,0,0,.3);
+        }
+        .tb-label { font-size: 13px; color: rgba(255,255,255,.55); }
+        .tb-btn {
+          padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+          cursor: pointer; border: none; display: flex; align-items: center; gap: 6px;
+          transition: opacity .18s;
+        }
+        .tb-btn:hover { opacity: .82; }
+        .tb-btn.green { background: #25D366; color: #fff; }
+        .tb-btn.blue  { background: #3B82F6; color: #fff; }
+        .tb-btn.ghost { background: rgba(255,255,255,.13); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+        .tb-btn.pink  { background: #e40187; color: #fff; }
 
-            {/* Right Side: Order Summary */}
-            <div style={{ position: 'sticky', top: 40, background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, borderBottom: '2px solid #e2e8f0', paddingBottom: 16, margin: 0 }}>סיכום ההזמנה</h3>
+        @media screen and (min-width: 769px) {
+          .mobile-only { display: none !important; }
+          .desktop-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+          .desktop-table th { background: #f8fafc; padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700; }
+          .desktop-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        }
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 300, overflowY: 'auto', paddingRight: 8 }}>
-                {items.map((item: any) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 13, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
-                    <div style={{ flex: 1, paddingLeft: 12 }}>
-                      <div style={{ fontWeight: 600 }}>{item.product_name}</div>
-                      {item.description && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{item.description}</div>}
-                      <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{item.quantity} × ₪{parseFloat(item.unit_price).toFixed(2)} {item.discount_percent > 0 ? `(-${item.discount_percent}%)` : ''}</div>
-                    </div>
-                    <div style={{ fontWeight: 600 }}>₪{parseFloat(item.line_total).toFixed(2)}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '2px dashed #e2e8f0', paddingTop: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-                  <span>סה״כ פריטים (לפני מע"מ)</span>
-                  <span>₪{parseFloat(quote.subtotal).toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-                  <span>עלות שילוח (לפני מע"מ)</span>
-                  <span>₪{parseFloat(quote.shipping_cost).toFixed(2)}</span>
-                </div>
-                {paymentMethod === 'check_delivery' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#f59e0b', fontWeight: 600 }}>
-                    <span>תוספת צ׳ק לשליח (כולל מע"מ)</span>
-                    <span>₪25.00</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#475569' }}>
-                  <span>מע״מ (18%)</span>
-                  <span>₪{((parseFloat(quote.subtotal) + parseFloat(quote.shipping_cost)) * 0.18).toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, color: '#131b40', marginTop: 8, borderTop: '2px solid #e2e8f0', paddingTop: 16 }}>
-                  <span>סה״כ לתשלום אישור הזמנה (כולל מע״מ)</span>
-                  <span>₪{calculateFinalTotal().toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-          </main>
-          <style dangerouslySetInnerHTML={{
-            __html: `
         @media screen and (max-width: 768px) {
+          .desktop-only { display: none !important; }
           .web-main-container { padding: 16px 12px !important; }
-          .web-main-container main { grid-template-columns: 1fr !important; }
-          .checkout-header { flex-direction: column !important; align-items: stretch !important; padding: 20px !important; }
-          .checkout-header > div:last-child { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
           .responsive-grid { grid-template-columns: 1fr !important; }
           .no-print h2 { font-size: 16px !important; }
+          
+          .send-toolbar {
+            justify-content: center;
+            padding: 10px 8px !important;
+            gap: 6px !important;
+          }
+          .tb-label { display: none !important; }
+          .tb-btn {
+            padding: 8px !important;
+            font-size: 11px !important;
+            flex: 1;
+            justify-content: center;
+            white-space: nowrap;
+          }
+          .tb-btn svg { width: 13px !important; height: 13px !important; margin-left: -2px; }
         }
         @media print {
-          body { 
-            background: white !important; 
+          body {
+            background: white !important;
             padding: 0 !important;
+            margin: 0 !important;
           }
-          .web-main-container { 
-            display: none !important; 
+          .web-main-container {
+            display: none !important;
           }
-          .print-only-layout { 
-            display: block !important; 
+          .print-only-layout {
+            display: block !important;
             box-shadow: none !important;
-            padding: 0 !important;
+            padding: 40px 60px !important;
             max-width: none !important;
+            margin: 0 !important;
           }
           .no-print {
             display: none !important;
           }
           @page {
-            margin: 1.5cm;
+            margin: 20mm 0;
+            size: A4;
           }
         }
       `}} />
-        </div>
-      )}
     </>
   )
 }

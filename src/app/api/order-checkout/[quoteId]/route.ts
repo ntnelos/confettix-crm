@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const getServiceClient = () =>
   createClient(
@@ -158,6 +161,76 @@ export async function POST(
     }).eq('id', order.id).select().single()
 
     if (error) throw error
+
+    // 6. Send Emails via Resend
+    let clientEmail = null;
+    if (order.opportunity_id) {
+       const { data: oppForContact } = await supabase.from('opportunities').select('contact_id').eq('id', order.opportunity_id).single()
+       if (oppForContact?.contact_id) {
+          const { data: contactData } = await supabase.from('contacts').select('email').eq('id', oppForContact.contact_id).single()
+          if (contactData?.email) {
+             clientEmail = contactData.email;
+          }
+       }
+    }
+
+    try {
+        const orderLink = `https://confettix-crm.vercel.app/orders/${quoteId}/checkout?mode=readOnly`;
+        const emailDate = new Date().toLocaleDateString('he-IL');
+        const customerName = contact_name || invoice_company_name || 'לקוח יקר';
+
+        // Send to Client
+        if (clientEmail) {
+            await resend.emails.send({
+                from: 'Confettix <orders@confettix.co.il>',
+                to: [clientEmail],
+                subject: 'הזמנתך אושרה בהצלחה! - קונפטיקס מתנות',
+                html: `
+<div dir="rtl" style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; text-align: right;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <img src="https://confettix-crm.vercel.app/confettix-logo.png" alt="קונפטיקס מתנות בע״מ" style="max-height: 80px;" />
+  </div>
+  <h2 style="color: #131b40; margin-bottom: 5px;">קונפטיקס מתנות בע״מ</h2>
+  <p style="color: #64748b; margin-top: 0;">${emailDate}</p>
+  
+  <h1 style="color: #ec4899;">הזמנתך אושרה בהצלחה!</h1>
+  
+  <p style="font-size: 16px;">שלום ${customerName},</p>
+  <p style="font-size: 16px;">מצ"ב הזמנה חתומה.</p>
+  
+  <div style="margin: 30px 0; text-align: center;">
+    <a href="${orderLink}" 
+       style="background-color: #ec4899; color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);">
+      לצפייה במסמך החתום
+    </a>
+  </div>
+  
+  <p style="font-size: 12px; color: #94a3b8; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+    לחיצה על הקישור להורדת המסמך מהווה הסכמתך לקבל מסמך חתום דיגיטלית בדואר אלקטרוני.
+  </p>
+</div>
+                `
+            });
+        }
+
+        // Send to Admin
+        await resend.emails.send({
+            from: 'Confettix <orders@confettix.co.il>',
+            to: ['office@confettix.co.il'],
+            subject: `הזמנה חתומה חדשה: ${invoice_company_name}`,
+            html: `
+<div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
+  <h2>הזמנה חתומה חדשה! 🎉</h2>
+  <p>לקוח: <strong>${invoice_company_name}</strong></p>
+  <p>איש קשר: <strong>${contact_name}</strong></p>
+  <p>סכום: <strong>₪${total_amount}</strong></p>
+  <p><a href="${orderLink}">צפה בהזמנה החתומה</a></p>
+</div>
+            `
+        });
+    } catch (emailErr) {
+        console.error('Error sending emails:', emailErr);
+    }
 
     return NextResponse.json({ success: true, order: updatedOrder })
   } catch (error: any) {

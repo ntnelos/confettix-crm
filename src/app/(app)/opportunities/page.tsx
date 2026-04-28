@@ -22,7 +22,7 @@ const STATUSES = [
   { id: 'followup', label: 'במעקב', color: '#ff9800', bg: 'rgba(255,152,0,0.1)' },
   { id: 'won', label: 'זכייה', color: '#4caf50', bg: 'rgba(76,175,80,0.1)' },
   { id: 'pending_payment', label: 'ממתין לתשלום', color: '#3f51b5', bg: 'rgba(63,81,181,0.1)' },
-  { id: 'paid', label: 'שולם', color: '#009688', bg: 'rgba(0,150,136,0.1)' },
+  { id: 'paid', label: 'סגור/שולם', color: '#009688', bg: 'rgba(0,150,136,0.1)' },
   { id: 'lost', label: 'בוטל / סגור', color: '#9e9e9e', bg: 'rgba(158,158,158,0.1)' }
 ]
 
@@ -34,13 +34,30 @@ function OpportunitiesContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<keyof Opportunity>('updated_at')
   const [sortAsc, setSortAsc] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
-  const fetchOpps = async () => {
+  // Filter state
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([])
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterUpdatedFrom, setFilterUpdatedFrom] = useState('')
+  const [filterUpdatedTo, setFilterUpdatedTo] = useState('')
+  const [filterAmountMin, setFilterAmountMin] = useState('')
+  const [filterAmountMax, setFilterAmountMax] = useState('')
+
+  const fetchOpps = async (query = '') => {
     setLoading(true)
-    const { data, error } = await supabase
+    let dbQuery = supabase
       .from('opportunities')
       .select('*, organizations(name), contacts(name)')
       .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (query) {
+      dbQuery = dbQuery.or(`subject.ilike.%${query}%,lead_source.ilike.%${query}%`)
+    }
+
+    const { data, error } = await dbQuery
 
     if (!error && data) {
       // Deduplicate by ID
@@ -55,9 +72,12 @@ function OpportunitiesContent() {
     setLoading(false)
   }
 
-  useEffect(() => { 
-    fetchOpps() 
-  }, [])
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchOpps(searchQuery)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [searchQuery])
 
   const updateOppStatus = async (id: string, newStatus: string) => {
     // Optimistic UI Update
@@ -91,11 +111,50 @@ function OpportunitiesContent() {
     }
   }
 
-  const filteredOpps = opportunities.filter(o => 
-    o.subject?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (o.organizations?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (o.contacts?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  ).sort((a, b) => {
+  const hasActiveFilters = filterStatuses.length > 0 || filterDateFrom || filterDateTo || filterUpdatedFrom || filterUpdatedTo || filterAmountMin || filterAmountMax
+
+  const clearFilters = () => {
+    setFilterStatuses([])
+    setFilterDateFrom('')
+    setFilterDateTo('')
+    setFilterUpdatedFrom('')
+    setFilterUpdatedTo('')
+    setFilterAmountMin('')
+    setFilterAmountMax('')
+  }
+
+  const toggleStatus = (statusId: string) => {
+    setFilterStatuses(prev =>
+      prev.includes(statusId) ? prev.filter(s => s !== statusId) : [...prev, statusId]
+    )
+  }
+
+  const filteredOpps = opportunities.filter(o => {
+    // Text search
+    const matchSearch =
+      o.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.organizations?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.contacts?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    if (!matchSearch) return false
+
+    // Status filter
+    if (filterStatuses.length > 0 && !filterStatuses.includes(o.status)) return false
+
+    // Date created range
+    if (filterDateFrom && new Date(o.created_at) < new Date(filterDateFrom)) return false
+    if (filterDateTo && new Date(o.created_at) > new Date(filterDateTo + 'T23:59:59')) return false
+
+    // Date updated range
+    if (filterUpdatedFrom && new Date(o.updated_at) < new Date(filterUpdatedFrom)) return false
+    if (filterUpdatedTo && new Date(o.updated_at) > new Date(filterUpdatedTo + 'T23:59:59')) return false
+
+    // Amount range
+    const val = o.calculated_value || 0
+    if (filterAmountMin && val < parseFloat(filterAmountMin)) return false
+    if (filterAmountMax && val > parseFloat(filterAmountMax)) return false
+
+    return true
+  }).sort((a, b) => {
     let aVal = a[sortField] || ''
     let bVal = b[sortField] || ''
     if (sortField === 'calculated_value' || sortField === 'status') {
@@ -159,14 +218,107 @@ function OpportunitiesContent() {
       </div>
 
       <div className="page-body">
-        <div style={{ marginBottom: 20 }}>
-          <input 
-            type="text" 
-            placeholder="חיפוש לפי סטטוס, נושא הזדמנות, שם ארגון או מזהה..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{ width: '100%', maxWidth: 400, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }}
-          />
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input 
+              type="text" 
+              placeholder="חיפוש לפי סטטוס, נושא הזדמנות, שם ארגון או מזהה..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ flex: 1, minWidth: 240, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }}
+            />
+            <button
+              onClick={() => setShowFilters(f => !f)}
+              style={{
+                padding: '10px 18px', borderRadius: 8, border: '1px solid var(--border)',
+                background: showFilters || hasActiveFilters ? 'var(--pink)' : 'var(--surface)',
+                color: showFilters || hasActiveFilters ? 'white' : 'var(--text-primary)',
+                fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              סינון
+              {hasActiveFilters && <span style={{ background: 'white', color: 'var(--pink)', borderRadius: '50%', width: 18, height: 18, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{filterStatuses.length + (filterDateFrom||filterDateTo ? 1:0) + (filterUpdatedFrom||filterUpdatedTo ? 1:0) + (filterAmountMin||filterAmountMax ? 1:0)}</span>}
+            </button>
+            {hasActiveFilters && (
+              <button onClick={clearFilters} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                נקה סינון ✕
+              </button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div style={{ marginTop: 12, padding: '20px 24px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 20 }}>
+              
+              {/* Status Filter */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>סטטוס הזדמנות</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {STATUSES.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleStatus(s.id)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        border: `1.5px solid ${filterStatuses.includes(s.id) ? s.color : 'var(--border)'}`,
+                        background: filterStatuses.includes(s.id) ? s.bg : 'transparent',
+                        color: filterStatuses.includes(s.id) ? s.color : 'var(--text-secondary)',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      {filterStatuses.includes(s.id) && '✓ '}{s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+
+                {/* Created Date Range */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>תאריך יצירה</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+                    <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                </div>
+
+                {/* Updated Date Range */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>תאריך עדכון אחרון</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="date" value={filterUpdatedFrom} onChange={e => setFilterUpdatedFrom(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+                    <input type="date" value={filterUpdatedTo} onChange={e => setFilterUpdatedTo(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                </div>
+
+                {/* Amount Range */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>ערך עסקה (₪)</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" placeholder="מינימום" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+                    <input type="number" placeholder="מקסימום" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                </div>
+
+              </div>
+
+              {filteredOpps.length >= 0 && (
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  מציג <strong>{filteredOpps.length}</strong> מתוך <strong>{opportunities.length}</strong> הזדמנויות
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {loading ? (

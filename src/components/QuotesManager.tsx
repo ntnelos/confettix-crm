@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 type Quote = Database['public']['Tables']['quotes']['Row'] & { orders?: any[] }
 type QuoteItem = Database['public']['Tables']['quote_items']['Row']
 
-export default function QuotesManager({ opportunityId, onOrderUpdated }: { opportunityId: string, onOrderUpdated?: () => void }) {
+export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdated }: { opportunityId: string, paymentDate?: string | null, onOrderUpdated?: () => void }) {
   const supabase = createClient()
   const router = useRouter()
   const [quotes, setQuotes] = useState<Quote[]>([])
@@ -27,9 +27,9 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
   const [recentOpps, setRecentOpps] = useState<any[]>([])
   const [isDuplicating, setIsDuplicating] = useState(false)
 
-  // Invoice modal state
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [invoiceManualLink, setInvoiceManualLink] = useState('')
+  const [invoiceManualNumber, setInvoiceManualNumber] = useState('')
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
 
   // Local shipping input state to prevent reset on re-render
@@ -287,6 +287,7 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
         await (supabase.from('quote_items') as any).insert({
           quote_id: newQuote.id,
           product_name: item.product_name,
+          description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           discount_percent: item.discount_percent,
@@ -350,17 +351,17 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
 
     const { data: { user } } = await supabase.auth.getUser()
     const { data: newOrder, error } = await (supabase.from('orders') as any).insert({
-       quote_id: quoteId,
-       opportunity_id: opportunityId,
-       total_amount: sourceQuote.total_with_vat || 0,
-       status: 'pending_signature',
-       ...(user?.id && { created_by: user.id })
+      quote_id: quoteId,
+      opportunity_id: opportunityId,
+      total_amount: sourceQuote.total_with_vat || 0,
+      status: 'pending_signature',
+      ...(user?.id && { created_by: user.id })
     }).select().single()
-    
+
     if (error) {
-       console.error('Order insert error:', error)
-       alert('שגיאה ביצירת מסגרת הזמנה: ' + error.message)
-       return null
+      console.error('Order insert error:', error)
+      alert('שגיאה ביצירת מסגרת הזמנה: ' + error.message)
+      return null
     }
     await fetchQuotes()
     return newOrder
@@ -383,6 +384,12 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
       return
     }
 
+    if (!paymentDate) {
+      alert('נא למלא "תאריך תשלום" בפרטי ההזדמנות לפני הפקת חשבונית.')
+      setIsGeneratingInvoice(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/morning/document', {
         method: 'POST',
@@ -396,6 +403,8 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
         alert('חשבונית הופקה בהצלחה ונשמרה במערכת!')
         setShowInvoiceModal(false)
         fetchQuotes()
+        if (onOrderUpdated) onOrderUpdated()
+        router.refresh()
       }
     } catch (err: any) {
       console.error('Client-side invoice fetch error:', err)
@@ -416,9 +425,22 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
       return
     }
 
+    if (!paymentDate) {
+      alert('נא למלא "תאריך תשלום" בפרטי ההזדמנות לפני הפקת חשבונית.')
+      setIsGeneratingInvoice(false)
+      return
+    }
+
+    if (!invoiceManualNumber) {
+      alert('נא להזין את מספר המסמך')
+      setIsGeneratingInvoice(false)
+      return
+    }
+
     const newInvoice = {
       order_id: order.id,
       type: 'invoice',
+      invoice_number: invoiceManualNumber,
       amount: order.total_amount,
       pdf_url: invoiceManualLink,
       status: 'issued',
@@ -429,7 +451,14 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
     if (error) {
       alert('שגיאה בשמירת הקישור: ' + error.message)
     } else {
-      alert('חשבונית ידנית נשמרה בהצלחה!')
+      // Update opportunity status to 'pending_payment'
+      const { error: oppErr } = await (supabase.from('opportunities') as any)
+        .update({ status: 'pending_payment' })
+        .eq('id', order.opportunity_id)
+      
+      if (oppErr) console.warn('Failed to update opp status:', oppErr)
+
+      alert('חשבונית ידנית נשמרה בהצלחה!');
       setShowInvoiceModal(false)
       setInvoiceManualLink('')
       fetchQuotes()
@@ -440,7 +469,7 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
   }
 
   const approveQuoteToOrder = async (quoteId: string) => {
-    if (!window.confirm('האם לאשר הצעת מחיר זו? ההזדמנות תעבור לסטטוס "זכיה" וסכום העסקה יעודכן.')) return;
+    if (!window.confirm('האם לאשר הצעת מחיר זו? ההזדמנות תעבור לסטטוס "בטיפול" וסכום העסקה יעודכן.')) return;
     setIsDuplicating(true)
     const sourceQuote = quotes.find(q => q.id === quoteId)
     const sourceItems = itemsMap[quoteId] || []
@@ -448,13 +477,13 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
 
     // Update opportunity
     await (supabase.from('opportunities') as any).update({
-      status: 'won',
+      status: 'followup',
       calculated_value: sourceQuote.total_with_vat || 0
     }).eq('id', opportunityId);
 
     // Duplicate Quote as "הזמנה" with approved status
     const today = new Date();
-    const dateStr = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+    const dateStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
     const { data: newQuote } = await (supabase.from('quotes') as any).insert({
       opportunity_id: opportunityId,
       name: `הזמנה ${dateStr}`,
@@ -484,6 +513,8 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
       }
       await fetchQuotes()
       setActiveQuoteId(newQuote.id)
+      if (onOrderUpdated) onOrderUpdated()
+      router.refresh()
     }
     setIsDuplicating(false)
   }
@@ -553,13 +584,13 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                   />
                 </div>
                 <div style={{ padding: '24px 20px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                  {activeQuote?.orders?.some((or: any) => or.status === 'signed') ? (
-                    <div style={{ textAlign: 'center', color: '#166534', background: '#f0fdf4', padding: '16px', borderRadius: 8, border: '1px solid #b91c1c00', borderLeft: '4px solid #4caf50', fontWeight: 600 }}>
-                      🛡️ הזמנה זו נחתמה ומאובטחת. לא ניתן לבצע שינויים בפריטים.
+                  {activeQuote?.orders?.some((or: any) => or.status === 'paid') ? (
+                    <div style={{ textAlign: 'center', color: '#166534', background: '#f0fdf4', padding: '16px', borderRadius: 8, border: '1px solid #b91c1c00', borderLeft: '4px solid #009688', fontWeight: 600 }}>
+                      💰 הזמנה זו שולמה. לא ניתן לבצע שינויים בפריטים.
                     </div>
-                  ) : activeQuote?.status === 'approved' ? (
+                  ) : activeQuote?.orders?.some((or: any) => or.status === 'signed') ? (
                     <div style={{ textAlign: 'center', color: '#166534', background: '#f0fdf4', padding: '16px', borderRadius: 8, border: '1px solid #b91c1c00', borderLeft: '4px solid #4caf50', fontWeight: 600 }}>
-                      ✓ הזמנה אושרה. הפק חוזה לחתימה בסיום.
+                      🛡️ הזמנה זו נחתמה ע"י הלקוח. לא ניתן לבצע שינויים בפריטים.
                     </div>
                   ) : (
                     /* Smart Search Bar & Buttons */
@@ -627,7 +658,7 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                       </thead>
                       <tbody>
                         {(itemsMap[activeQuoteId] || []).map(item => {
-                          const isReadOnly = activeQuote?.status === 'approved' || activeQuote?.orders?.some((or: any) => or.status === 'signed');
+                          const isReadOnly = activeQuote?.orders?.some((or: any) => or.status === 'signed' || or.status === 'paid');
                           return (
                             <tr key={item.id}>
                               <td style={{ padding: 10, borderBottom: '1px solid var(--border-light)' }}>
@@ -703,10 +734,10 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                                     />
                                   </div>
                                   {!isReadOnly && item.unit_price > 0 && focusedPriceItemId === item.id && (
-                                    <button 
+                                    <button
                                       onClick={() => updateItem(activeQuoteId, item.id, 'unit_price', parseFloat((item.unit_price / 1.18).toFixed(2)))}
-                                      style={{ 
-                                        fontSize: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', 
+                                      style={{
+                                        fontSize: 10, background: 'var(--surface-2)', border: '1px solid var(--border)',
                                         borderRadius: 4, padding: '2px 6px', color: 'var(--text-muted)', cursor: 'pointer'
                                       }}
                                       title="לחץ כדי להמיר את הסכום כך שיהיה לפני מע״מ"
@@ -836,11 +867,11 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, alignItems: 'center' }}>מעבר להזמנה:</div>
                               <button
                                 onClick={() => approveQuoteToOrder(activeQuoteId)} disabled={isDuplicating}
-                                style={{ padding: '8px 14px', fontSize: 12, background: 'transparent', border: '1px solid #4caf50', color: '#4caf50', borderRadius: 6, cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', opacity: isDuplicating ? 0.7 : 1 }}
+                                style={{ padding: '8px 14px', fontSize: 12, background: 'transparent', border: '1px solid #4caf50', color: '#4caf50', borderRadius: 6, cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', opacity: isDuplicating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
                                 onMouseOver={e => { e.currentTarget.style.background = '#4caf50'; e.currentTarget.style.color = 'white' }}
                                 onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4caf50' }}
                               >
-                                אישור הצעת מחיר ⚡
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> הפק הזמנה
                               </button>
                             </div>
                           </>
@@ -868,8 +899,8 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                               const val = parseFloat(e.target.value) || 0
                               updateQuoteShipping(activeQuoteId, val)
                             }}
-                            disabled={activeQuote?.status === 'approved' || activeQuote?.orders?.some((or: any) => or.status === 'signed')}
-                            style={{ width: '100%', textAlign: 'left', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4, cursor: (activeQuote?.status === 'approved' || activeQuote?.orders?.some((or: any) => or.status === 'signed')) ? 'not-allowed' : 'text' }}
+                            disabled={activeQuote?.orders?.some((or: any) => or.status === 'signed' || or.status === 'paid')}
+                            style={{ width: '100%', textAlign: 'left', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4, cursor: (activeQuote?.orders?.some((or: any) => or.status === 'signed' || or.status === 'paid')) ? 'not-allowed' : 'text' }}
                           />
                         </div>
                       </div>
@@ -969,24 +1000,24 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
                 <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>• שווי הזמנה: <strong>₪{activeQuote?.total_with_vat?.toFixed(2)}</strong></div>
                 <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>• שם הלקוח: <strong>יימשך אוטומטית (איש קשר או ארגון)</strong></div>
                 <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>• כמות פריטים כללית: <strong>{totalItems}</strong></div>
-                
+
                 <div style={{ background: 'white', padding: 12, borderRadius: 8, border: '1px solid var(--border)', margin: '12px 0 16px', maxHeight: 150, overflowY: 'auto' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--text-muted)' }}>פירוט השורות שישלחו לחשבונית:</div>
                   {items.map(it => (
-                     <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--border-light)', paddingBottom: 6, marginBottom: 6 }}>
-                       <span>{it.quantity}X {it.product_name} <br/><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{it.description}</span></span>
-                       <span style={{ fontWeight: 600 }}>₪{it.line_total?.toFixed(2)}</span>
-                     </div>
+                    <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid var(--border-light)', paddingBottom: 6, marginBottom: 6 }}>
+                      <span>{it.quantity}X {it.product_name} <br /><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{it.description}</span></span>
+                      <span style={{ fontWeight: 600 }}>₪{it.line_total?.toFixed(2)}</span>
+                    </div>
                   ))}
                   {(activeQuote?.shipping_cost || 0) > 0 && (
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 4 }}>
-                       <span>1X דמי משלוח</span>
-                       <span style={{ fontWeight: 600 }}>₪{activeQuote?.shipping_cost?.toFixed(2)}</span>
-                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingBottom: 4 }}>
+                      <span>1X דמי משלוח</span>
+                      <span style={{ fontWeight: 600 }}>₪{activeQuote?.shipping_cost?.toFixed(2)}</span>
+                    </div>
                   )}
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => generateMorningInvoice(activeQuoteId)}
                   disabled={isGeneratingInvoice}
                   style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', fontWeight: 700, border: 'none', borderRadius: 8, cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer', fontSize: 15, transition: 'all 0.2s', opacity: isGeneratingInvoice ? 0.7 : 1 }}
@@ -998,27 +1029,38 @@ export default function QuotesManager({ opportunityId, onOrderUpdated }: { oppor
               {/* BOTTOM PART: Manual PDF Link */}
               <div style={{ background: 'white', padding: '16px', borderRadius: 12, border: '1px solid #e2e8f0' }}>
                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: 'var(--text)' }}>כבר הוצאתי חשבונית (הזנה ידנית)</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <input 
-                    type="url" 
-                    placeholder="הדבק כאן קישור (URL) לחשבונית ה-PDF..." 
-                    value={invoiceManualLink}
-                    onChange={(e) => setInvoiceManualLink(e.target.value)}
-                    disabled={isGeneratingInvoice}
-                    style={{ flex: 1, padding: '12px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, color: '#1e293b' }}
-                  />
-                  <button 
+                <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <input
+                      type="text"
+                      placeholder="מס׳ חשבונית (חובה)..."
+                      value={invoiceManualNumber}
+                      onChange={(e) => setInvoiceManualNumber(e.target.value)}
+                      disabled={isGeneratingInvoice}
+                      style={{ width: '150px', padding: '12px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, color: '#1e293b' }}
+                    />
+                    <input
+                      type="url"
+                      placeholder="הדבק כאן קישור (URL) לחשבונית ה-PDF..."
+                      value={invoiceManualLink}
+                      onChange={(e) => setInvoiceManualLink(e.target.value)}
+                      disabled={isGeneratingInvoice}
+                      style={{ flex: 1, padding: '12px 14px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, color: '#1e293b' }}
+                    />
+                  </div>
+                  <button
                     onClick={() => saveManualInvoice(activeQuoteId)}
-                    disabled={!invoiceManualLink || isGeneratingInvoice}
-                    style={{ 
-                      padding: '12px 24px', 
-                      background: '#3b82f6', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: 8, 
-                      fontWeight: 700, 
-                      cursor: (!invoiceManualLink || isGeneratingInvoice) ? 'not-allowed' : 'pointer', 
-                      opacity: (!invoiceManualLink || isGeneratingInvoice) ? 0.4 : 1,
+                    disabled={!invoiceManualLink || !invoiceManualNumber || isGeneratingInvoice}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      cursor: (!invoiceManualLink || !invoiceManualNumber || isGeneratingInvoice) ? 'not-allowed' : 'pointer',
+                      opacity: (!invoiceManualLink || !invoiceManualNumber || isGeneratingInvoice) ? 0.4 : 1,
+                      transition: 'opacity 0.2s',
                       boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)'
                     }}
                   >
