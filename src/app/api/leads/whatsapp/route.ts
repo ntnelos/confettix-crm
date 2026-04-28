@@ -48,12 +48,19 @@ export async function POST(request: NextRequest) {
   const messageData = body.messageData || body.message || {}
 
   // Phone: Green API sends in format "972521234567@c.us" → clean to local format
-  // For outgoing messages, 'sender' is our number and 'chatId' is the customer's number. 
-  // Thus we must prioritize chatId.
-  const rawPhone: string =
-    senderData.chatId || senderData.sender || senderData.phone || ''
+  // For incoming messages, prioritize `sender` (important for groups @g.us where chatId is the group ID).
+  // For outgoing messages, `sender` is our business number, so we must prioritize `chatId` (the customer).
+  let rawPhone: string = ''
+  
+  if (webhookType.startsWith('outgoing')) {
+    rawPhone = senderData.chatId || senderData.sender || senderData.phone || ''
+  } else {
+    rawPhone = senderData.sender || senderData.chatId || senderData.phone || ''
+  }
+
   const cleanPhone = rawPhone
     .replace('@c.us', '')
+    .replace('@g.us', '')
     .replace('@s.whatsapp.net', '')
     .replace(/^972/, '0')
     .trim()
