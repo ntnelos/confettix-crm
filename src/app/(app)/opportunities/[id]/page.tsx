@@ -457,7 +457,16 @@ export default function OpportunityDetailsPage() {
                                 </span>
                               </div>
                               <div style={{ color: 'var(--text-secondary)', lineHeight: 1.5, fontSize: 14, whiteSpace: 'pre-wrap' }}>
-                                 {update.content}
+                                 {update.content?.split(/(https?:\/\/[^\s]+)/g).map((part: string, index: number) => {
+                                   if (part.match(/https?:\/\/[^\s]+/)) {
+                                     return (
+                                       <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                                         {part}
+                                       </a>
+                                     )
+                                   }
+                                   return <span key={index}>{part}</span>
+                                 })}
                               </div>
                            </div>
                            <button onClick={() => handleDeleteUpdate(update.id)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="מחק תיעוד">

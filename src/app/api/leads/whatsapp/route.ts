@@ -66,13 +66,46 @@ export async function POST(request: NextRequest) {
     null
 
   // ── Extract message text ──
-  const messageText: string | null =
+  let messageText: string =
     messageData?.textMessageData?.textMessage ||
     messageData?.text ||
     messageData?.body ||
     messageData?.caption ||
     body.text ||
-    null
+    ''
+
+  // ── Handle Media Attachments ──
+  const image = messageData?.imageMessageData
+  const video = messageData?.videoMessageData
+  const doc = messageData?.documentMessageData
+  const audio = messageData?.audioMessageData
+  const fileMsg = messageData?.fileMessageData
+
+  const downloadUrl = image?.downloadUrl || video?.downloadUrl || doc?.downloadUrl || audio?.downloadUrl || fileMsg?.downloadUrl
+  const mimeType = image?.mimeType || video?.mimeType || doc?.mimeType || audio?.mimeType || fileMsg?.mimeType || 'application/octet-stream'
+  const fileName = doc?.fileName || fileMsg?.fileName || 'whatsapp_media'
+
+  if (downloadUrl) {
+    try {
+      console.log(`Downloading media from Green API: ${downloadUrl}`)
+      const res = await fetch(downloadUrl)
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        
+        console.log(`Uploading to Google Drive... (${buffer.length} bytes)`)
+        const { uploadFileToDrive } = await import('@/lib/google-drive')
+        const driveResult = await uploadFileToDrive(buffer, fileName, mimeType)
+        
+        const mediaTag = `\n\n[📎 קובץ מצורף] ${driveResult.url}`
+        messageText = messageText ? messageText + mediaTag : mediaTag
+      } else {
+        console.error('Failed to download media from Green API:', res.statusText)
+      }
+    } catch (err) {
+      console.error('Error handling media attachment:', err)
+    }
+  }
 
   if (!cleanPhone && !messageText) {
     return NextResponse.json({ skipped: true, reason: 'No phone or message' })

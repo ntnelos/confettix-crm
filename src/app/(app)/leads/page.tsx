@@ -640,7 +640,16 @@ export default function LeadsPage() {
                             </div>
                           ) : (
                             <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                              {msg.content}
+                              {msg.content?.split(/(https?:\/\/[^\s]+)/g).map((part: string, index: number) => {
+                                if (part.match(/https?:\/\/[^\s]+/)) {
+                                  return (
+                                    <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                                      {part}
+                                    </a>
+                                  )
+                                }
+                                return <span key={index}>{part}</span>
+                              })}
                             </div>
                           )}
                         </div>

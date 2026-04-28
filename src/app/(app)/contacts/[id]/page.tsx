@@ -567,7 +567,18 @@ export default function ContactDetailsPage() {
                             {srcIcons[inq.source] || '📋'}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{inq.message}</div>
+                            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                              {inq.message?.split(/(https?:\/\/[^\s]+)/g).map((part: string, index: number) => {
+                                if (part.match(/https?:\/\/[^\s]+/)) {
+                                  return (
+                                    <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
+                                      {part}
+                                    </a>
+                                  )
+                                }
+                                return <span key={index}>{part}</span>
+                              })}
+                            </div>
                             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{new Date(inq.created_at).toLocaleString('he-IL')}</div>
                           </div>
                         </div>
