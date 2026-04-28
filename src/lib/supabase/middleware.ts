@@ -39,9 +39,11 @@ export async function updateSession(request: NextRequest) {
                      request.nextUrl.pathname.startsWith('/register')
   const isQuotePreview = request.nextUrl.pathname.startsWith('/quotes/') &&
                          request.nextUrl.pathname.includes('/preview')
+  const isCheckoutPage = request.nextUrl.pathname.startsWith('/orders/') &&
+                         request.nextUrl.pathname.includes('/checkout')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
   
-  if (!user && !isAuthPage && !isQuotePreview && !isApiRoute) {
+  if (!user && !isAuthPage && !isQuotePreview && !isApiRoute && !isCheckoutPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
