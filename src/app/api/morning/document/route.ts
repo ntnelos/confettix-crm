@@ -291,6 +291,7 @@ export async function POST(request: NextRequest) {
       type: 'invoice',
       amount: docData.amount || order.total_amount,
       pdf_url: docData.url?.he || docData.url?.origin || null,
+      origin_url: docData.url?.origin || null,
       status: 'issued',
       issued_at: new Date().toISOString()
     }

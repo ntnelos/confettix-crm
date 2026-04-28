@@ -606,6 +606,11 @@ export default function OpportunityDetailsPage() {
                             👁️ צפייה במסמך מורנינג
                           </a>
                         )}
+                        {invoice.origin_url && invoice.origin_url !== invoice.pdf_url && (
+                          <a target="_blank" href={invoice.origin_url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: 'var(--surface-2)', color: 'var(--text-secondary)', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13, marginTop: 4, border: '1px solid var(--border)' }}>
+                            🔗 קישור מקור (Origin)
+                          </a>
+                        )}
                      </>
                    ) : (
                      <button
