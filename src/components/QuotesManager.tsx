@@ -14,6 +14,7 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [itemsMap, setItemsMap] = useState<Record<string, QuoteItem[]>>({})
   const [loading, setLoading] = useState(true)
+  const [opportunityData, setOpportunityData] = useState<any>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -52,6 +53,14 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
 
   const fetchQuotes = async () => {
     setLoading(true)
+    
+    // Fetch opportunity details
+    const { data: oppData } = await (supabase.from('opportunities') as any)
+      .select('*, contacts(name), organizations(name)')
+      .eq('id', opportunityId)
+      .single()
+    if (oppData) setOpportunityData(oppData)
+
     const { data: qData, error: qErr } = await (supabase.from('quotes') as any)
       .select('*, orders(*)')
       .eq('opportunity_id', opportunityId)
@@ -998,7 +1007,12 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: 'var(--text)' }}>מידע לשליחה ל-Morning (מערכת חשבונית ירוקה):</div>
                 <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>• שווי הזמנה: <strong>₪{activeQuote?.total_with_vat?.toFixed(2)}</strong></div>
-                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>• שם הלקוח: <strong>יימשך אוטומטית (איש קשר או ארגון)</strong></div>
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  • שם הלקוח: <strong>{opportunityData?.contacts?.name || opportunityData?.organizations?.name || 'לא צוין'}</strong>
+                  {opportunityData?.organizations?.name && opportunityData?.contacts?.name && (
+                    <span style={{ fontSize: 12, opacity: 0.8 }}> ({opportunityData.organizations.name})</span>
+                  )}
+                </div>
                 <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>• כמות פריטים כללית: <strong>{totalItems}</strong></div>
 
                 <div style={{ background: 'white', padding: 12, borderRadius: 8, border: '1px solid var(--border)', margin: '12px 0 16px', maxHeight: 150, overflowY: 'auto' }}>
