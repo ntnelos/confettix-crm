@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
   // ── Extract message text ──
   let messageText: string =
     messageData?.textMessageData?.textMessage ||
+    messageData?.extendedTextMessageData?.text ||
     messageData?.text ||
     messageData?.body ||
     messageData?.caption ||
