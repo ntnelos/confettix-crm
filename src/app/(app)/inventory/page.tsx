@@ -185,6 +185,7 @@ export default function InventoryPage() {
           '<div class="img-wrapper">' + imgHtml + '</div>' +
           '<div class="details">' +
             '<h2 class="name">' + item.name + '</h2>' +
+            (item.description ? '<p class="desc">' + item.description + '</p>' : '') +
             '<div class="stat-row"><span>\u05db\u05de\u05d5\u05ea \u05d1\u05de\u05dc\u05d0\u05d9:</span><strong>' + item.total_quantity + '</strong></div>' +
             '<div class="stat-row"><span>\u05e2\u05dc\u05d5\u05ea \u05d9\u05d7\u05d9\u05d3\u05d4:</span><strong>&#8362;' + (item.cost || 0) + '</strong></div>' +
           '</div>' +
@@ -206,7 +207,8 @@ export default function InventoryPage() {
       '.img-wrapper img{width:100%;height:100%;object-fit:cover;}' +
       '.placeholder{font-size:36px;opacity:0.2;}' +
       '.details{flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;}' +
-      '.name{font-size:20px;font-weight:700;margin:0 0 8px;line-height:1.3;color:#111;}' +
+      '.name{font-size:20px;font-weight:700;margin:0 0 4px;line-height:1.3;color:#111;}' +
+      '.desc{font-size:14px;color:#666;margin:0 0 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}' +
       '.stat-row{display:flex;justify-content:space-between;align-items:center;font-size:15px;color:#555;background:#f9fafb;padding:7px 12px;border-radius:7px;}' +
       '.stat-row strong{color:#111;font-size:17px;font-weight:600;}' +
       '@media print{body{padding:20px;}@page{margin:15mm;}.grid{gap:16px;}.item{box-shadow:none;border:1px solid #ccc;}}'
