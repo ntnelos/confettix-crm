@@ -488,46 +488,90 @@ export default function InventoryPage() {
                         </td>
                         <td className="py-3 px-4">
                           {editingItemId === item.id ? (
-                            <div className="flex flex-col gap-2" style={{ minWidth: 150 }}>
-                              <input
-                                className="form-input text-sm"
-                                placeholder="מופרד בפסיקים"
-                                style={{ width: '100%', padding: '4px 8px' }}
-                                value={editFormData.tags}
-                                onChange={e => setEditFormData(p => ({ ...p, tags: e.target.value }))}
-                              />
-                              {allTags.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 80, overflowY: 'auto' }}>
-                                  {allTags.map(t => {
+                            <div className="flex flex-col gap-2" style={{ minWidth: 200 }}>
+                              {/* Show currently selected tags */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean).map(t => (
+                                  <span
+                                    key={t}
+                                    style={{
+                                      fontSize: 11, padding: '2px 6px', background: 'var(--pink)', color: 'white', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4
+                                    }}
+                                  >
+                                    {t}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const currentTags = editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+                                        setEditFormData(p => ({ ...p, tags: currentTags.filter(tag => tag !== t).join(', ') }))
+                                      }}
+                                      style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0, fontSize: 10, display: 'flex' }}
+                                    >✕</button>
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Dropdown for existing tags */}
+                              {allTags.filter(t => !editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean).includes(t)).length > 0 && (
+                                <select
+                                  className="form-input text-sm"
+                                  style={{ padding: '4px 8px' }}
+                                  onChange={e => {
+                                    if (!e.target.value) return
+                                    const t = e.target.value
                                     const currentTags = editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
-                                    const isActive = currentTags.includes(t)
-                                    return (
-                                      <button
-                                        key={t}
-                                        type="button"
-                                        onClick={() => {
-                                          if (isActive) {
-                                            setEditFormData(p => ({ ...p, tags: currentTags.filter(tag => tag !== t).join(', ') }))
-                                          } else {
-                                            setEditFormData(p => ({ ...p, tags: currentTags.length > 0 ? `${currentTags.join(', ')}, ${t}` : t }))
-                                          }
-                                        }}
-                                        style={{
-                                          fontSize: 10,
-                                          padding: '2px 6px',
-                                          borderRadius: 12,
-                                          cursor: 'pointer',
-                                          border: isActive ? '1px solid var(--pink)' : '1px solid var(--border)',
-                                          background: isActive ? 'var(--pink)' : 'var(--surface-2)',
-                                          color: isActive ? '#fff' : 'var(--text-secondary)'
-                                        }}
-                                      >
-                                        {t}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
+                                    setEditFormData(p => ({ ...p, tags: currentTags.length > 0 ? `${currentTags.join(', ')}, ${t}` : t }))
+                                    e.target.value = "" // reset select
+                                  }}
+                                >
+                                  <option value="">+ הוסף תגית קיימת...</option>
+                                  {allTags.filter(t => !editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean).includes(t)).map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
+                                </select>
                               )}
+
+                              {/* Input for new tag */}
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <input
+                                  id={`new-tag-input-${item.id}`}
+                                  className="form-input text-sm"
+                                  placeholder="תגית חדשה..."
+                                  style={{ width: '100%', padding: '4px 8px' }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault()
+                                      const t = (e.target as HTMLInputElement).value.trim()
+                                      if (t) {
+                                        const currentTags = editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+                                        if (!currentTags.includes(t)) {
+                                          setEditFormData(p => ({ ...p, tags: currentTags.length > 0 ? `${currentTags.join(', ')}, ${t}` : t }))
+                                        }
+                                        ;(e.target as HTMLInputElement).value = ''
+                                      }
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '4px 8px', fontSize: 12 }}
+                                  onClick={(e) => {
+                                    const input = document.getElementById(`new-tag-input-${item.id}`) as HTMLInputElement
+                                    if (!input) return
+                                    const t = input.value.trim()
+                                    if (t) {
+                                      const currentTags = editFormData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+                                      if (!currentTags.includes(t)) {
+                                        setEditFormData(p => ({ ...p, tags: currentTags.length > 0 ? `${currentTags.join(', ')}, ${t}` : t }))
+                                      }
+                                      input.value = ''
+                                    }
+                                  }}
+                                >
+                                  הוסף
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 150 }}>
