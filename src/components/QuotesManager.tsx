@@ -591,6 +591,23 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
                       flex: 1, padding: '2px 4px', cursor: activeQuote?.status === 'approved' ? 'not-allowed' : 'text'
                     }}
                   />
+                  {/* Order Number Badge on the left */}
+                  {activeQuote?.orders?.[0]?.order_number && (
+                    <span style={{
+                      background: 'rgba(255,255,255,0.12)',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                      color: 'rgba(255,255,255,0.9)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                      fontFamily: 'monospace'
+                    }}>
+                      {activeQuote.orders[0].order_number}
+                    </span>
+                  )}
                 </div>
                 <div style={{ padding: '24px 20px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                   {activeQuote?.orders?.some((or: any) => or.status === 'paid') ? (
