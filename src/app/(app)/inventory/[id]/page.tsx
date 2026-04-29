@@ -468,8 +468,10 @@ export default function InventoryItemPage() {
                         ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
                         : <span style={{ fontSize: 48, opacity: 0.3 }}>📦</span>
                     )}
-                    {/* Delete image button */}
                     {!editingDetails && item.image_url && (
+                      <button
+                        onClick={handleDeleteImage}
+                        disabled={deletingImage}
                         style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                         title="מחק תמונה"
                       >
