@@ -470,13 +470,10 @@ export default function InventoryItemPage() {
                     )}
                     {/* Delete image button */}
                     {!editingDetails && item.image_url && (
-                      <button
-                        onClick={handleDeleteImage}
-                        disabled={deletingImage}
-                        style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(239,68,68,0.85)', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 7px', fontSize: 11, cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                        style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                         title="מחק תמונה"
                       >
-                        {deletingImage ? '...' : '🗑'}
+                        {deletingImage ? <span className="spinner" style={{ width: 14, height: 14, borderTopColor: '#fff', borderWidth: 2 }} /> : <TrashIcon />}
                       </button>
                     )}
                   </div>
@@ -637,43 +634,74 @@ export default function InventoryItemPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500">
+                  <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 hidden sm:table-header-group">
                     <tr>
-                      <th className="py-3 px-6 font-medium">תאריך</th>
-                      <th className="py-3 px-6 font-medium">פעולה</th>
+                      <th className="py-3 px-6 font-medium">תאריך ופעולה</th>
                       <th className="py-3 px-6 font-medium">מיקום</th>
                       <th className="py-3 px-6 font-medium">שינוי</th>
                       <th className="py-3 px-6 font-medium">יתרה חדשה</th>
                       <th className="py-3 px-6 font-medium">הערות / משתמש</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
                     {logs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">אין היסטוריית פעולות לפריט זה</td>
+                        <td colSpan={5} className="py-8 text-center text-gray-500">אין היסטוריית פעולות לפריט זה</td>
                       </tr>
                     ) : (
                       logs.map(log => (
-                        <tr key={log.id} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50">
-                          <td className="py-3 px-6 text-gray-500">
-                            {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                        <tr key={log.id} className="flex flex-col sm:table-row py-4 sm:py-0 hover:bg-gray-50/50">
+                          {/* Date & Action */}
+                          <td className="py-2 sm:py-4 px-6">
+                            <div className="flex justify-between sm:block">
+                              <span className="sm:hidden font-bold text-gray-400">תאריך ופעולה:</span>
+                              <div>
+                                <div className="text-xs text-gray-400">
+                                  {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="mt-1">
+                                  {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[10px] font-bold">הכנסה</span>}
+                                  {log.type === 'REMOVE' && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px] font-bold">הוצאה</span>}
+                                  {log.type === 'TRANSFER' && <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px] font-bold">העברה</span>}
+                                  {log.type === 'SET' && <span className="text-gray-600 bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold">עדכון כמות</span>}
+                                </div>
+                              </div>
+                            </div>
                           </td>
-                          <td className="py-3 px-6">
-                            {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-1 rounded text-xs">הכנסה</span>}
-                            {log.type === 'REMOVE' && <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs">הוצאה</span>}
-                            {log.type === 'TRANSFER' && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs">העברה</span>}
-                            {log.type === 'SET' && <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs">עדכון כמות</span>}
+                          {/* Location */}
+                          <td className="py-2 sm:py-4 px-6">
+                            <div className="flex justify-between sm:block">
+                              <span className="sm:hidden font-bold text-gray-400">מיקום:</span>
+                              <span className="font-medium">{log.inventory_level?.location}</span>
+                            </div>
                           </td>
-                          <td className="py-3 px-6 font-medium">{log.inventory_level?.location}</td>
-                          <td className="py-3 px-6 font-bold" dir="ltr">
-                            <span className={log.quantity_changed > 0 ? 'text-green-600' : 'text-red-500'}>
-                              {log.quantity_changed > 0 ? `+${log.quantity_changed}` : log.quantity_changed}
-                            </span>
+                          {/* Change */}
+                          <td className="py-2 sm:py-4 px-6">
+                            <div className="flex justify-between sm:block">
+                              <span className="sm:hidden font-bold text-gray-400">שינוי:</span>
+                              <span className="font-bold" dir="ltr">
+                                <span className={log.quantity_changed > 0 ? 'text-green-600' : 'text-red-500'}>
+                                  {log.quantity_changed > 0 ? `+${log.quantity_changed}` : log.quantity_changed}
+                                </span>
+                              </span>
+                            </div>
                           </td>
-                          <td className="py-3 px-6">{log.new_quantity}</td>
-                          <td className="py-3 px-6 text-gray-500">
-                            <div className="truncate max-w-[200px]" title={log.notes || ''}>{log.notes || '-'}</div>
-                            <div className="text-xs opacity-70">{log.user?.full_name || 'מערכת'}</div>
+                          {/* Balance */}
+                          <td className="py-2 sm:py-4 px-6">
+                            <div className="flex justify-between sm:block">
+                              <span className="sm:hidden font-bold text-gray-400">יתרה חדשה:</span>
+                              <span className="font-semibold text-gray-700">{log.new_quantity}</span>
+                            </div>
+                          </td>
+                          {/* Notes / User */}
+                          <td className="py-2 sm:py-4 px-6">
+                            <div className="flex flex-col sm:block">
+                              <span className="sm:hidden font-bold text-gray-400 mb-1">הערות ומשתמש:</span>
+                              <div className="text-gray-600 text-xs sm:text-sm">
+                                <div className="break-words max-w-full" title={log.notes || ''}>{log.notes || '-'}</div>
+                                <div className="text-[10px] opacity-70 mt-0.5 font-medium">{log.user?.full_name || 'מערכת'}</div>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1068,4 +1096,13 @@ function ArrowRightLeftIcon() {
 }
 function EditIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+}
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18"></path>
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+    </svg>
+  )
 }
