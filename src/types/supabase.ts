@@ -1048,6 +1048,75 @@ export type Database = {
           },
         ]
       }
+      inventory_locations: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      item_categories: {
+        Row: {
+          id: string
+          name: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          id: string
+          created_at: string
+          level: string
+          service: string
+          message: string
+          details: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          level: string
+          service: string
+          message: string
+          details?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          level?: string
+          service?: string
+          message?: string
+          details?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
