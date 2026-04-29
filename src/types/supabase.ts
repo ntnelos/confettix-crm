@@ -1069,24 +1069,6 @@ export type Database = {
         }
         Relationships: []
       }
-      item_categories: {
-        Row: {
-          id: string
-          name: string
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          created_at?: string | null
-        }
-        Relationships: []
-      }
       system_logs: {
         Row: {
           id: string
