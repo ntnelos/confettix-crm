@@ -432,6 +432,69 @@ export type Database = {
           issued_at?: string | null
         }
       }
+      leads: {
+        Row: {
+          id: string
+          source: 'whatsapp' | 'website' | 'manual'
+          sender_name: string | null
+          sender_phone: string | null
+          sender_email: string | null
+          company_name: string | null
+          message: string | null
+          gift_type: string | null
+          estimated_quantity: number | null
+          status: 'new' | 'converted' | 'trash'
+          is_existing_customer: boolean
+          matched_contact_id: string | null
+          created_at: string
+          updated_at: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_term: string | null
+          utm_content: string | null
+        }
+        Insert: {
+          id?: string
+          source?: 'whatsapp' | 'website' | 'manual'
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_email?: string | null
+          company_name?: string | null
+          message?: string | null
+          gift_type?: string | null
+          estimated_quantity?: number | null
+          status?: 'new' | 'converted' | 'trash'
+          is_existing_customer?: boolean
+          matched_contact_id?: string | null
+          created_at?: string
+          updated_at?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_term?: string | null
+          utm_content?: string | null
+        }
+        Update: {
+          source?: 'whatsapp' | 'website' | 'manual'
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_email?: string | null
+          company_name?: string | null
+          message?: string | null
+          gift_type?: string | null
+          estimated_quantity?: number | null
+          status?: 'new' | 'converted' | 'trash'
+          is_existing_customer?: boolean
+          matched_contact_id?: string | null
+          updated_at?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_term?: string | null
+          utm_content?: string | null
+        }
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
