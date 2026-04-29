@@ -165,23 +165,41 @@ export default function NewInventoryItemPage() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
               <div className="form-group">
                 <label>קטגוריה</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  placeholder="בחר או הקלד חדשה..."
-                  list="categories-list"
-                  value={formData.category}
-                  onChange={e => set('category', e.target.value)}
-                />
-                <datalist id="categories-list">
-                  {categories.map(cat => (
-                    <option key={cat} value={cat} />
-                  ))}
-                </datalist>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="form-input"
+                    type="text"
+                    placeholder="בחר או הקלד חדשה..."
+                    list="categories-list"
+                    value={formData.category}
+                    onChange={e => set('category', e.target.value)}
+                    style={{ paddingLeft: '32px' }}
+                  />
+                  <div style={{ 
+                    position: 'absolute', 
+                    left: '10px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    pointerEvents: 'none',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                  <datalist id="categories-list">
+                    {categories.map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
+
               <div className="form-group">
                 <label>תגיות</label>
                 <input
@@ -221,6 +239,7 @@ export default function NewInventoryItemPage() {
                   </div>
                 )}
               </div>
+
               <div className="form-group">
                 <label>עלות פריט (₪)</label>
                 <input
