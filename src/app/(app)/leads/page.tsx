@@ -409,7 +409,11 @@ export default function LeadsPage() {
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       {(() => {
-                        const notes = lead.lead_messages?.filter((m: any) => m.source === 'note').sort((a: any,b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []
+                        const notes = lead.lead_messages?.filter((m: any) => m.source === 'note').sort((a: any,b: any) => {
+                          const da = a.created_at ? new Date(a.created_at).getTime() : 0
+                          const db = b.created_at ? new Date(b.created_at).getTime() : 0
+                          return db - da
+                        }) || []
                         const lastNote = notes[0]?.content || '—'
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -502,7 +506,11 @@ export default function LeadsPage() {
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       {(() => {
-                        const notes = lead.lead_messages?.filter((m: any) => m.source === 'note').sort((a: any,b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || []
+                        const notes = lead.lead_messages?.filter((m: any) => m.source === 'note').sort((a: any,b: any) => {
+                          const da = a.created_at ? new Date(a.created_at).getTime() : 0
+                          const db = b.created_at ? new Date(b.created_at).getTime() : 0
+                          return db - da
+                        }) || []
                         const lastNote = notes[0]?.content || '—'
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -635,8 +643,12 @@ export default function LeadsPage() {
                               {msg.source === 'whatsapp' ? 'ליד (לקוח)' : msg.source === 'note' ? 'תיעוד (אני)' : 'הודעת מערכת'}
                             </span>
                             <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                              {new Date(msg.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })},{' '}
-                              {new Date(msg.created_at).toLocaleDateString('he-IL')}
+                              {msg.created_at ? (
+                                <>
+                                  {new Date(msg.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })},{' '}
+                                  {new Date(msg.created_at).toLocaleDateString('he-IL')}
+                                </>
+                              ) : '-'}
                             </span>
                             {msg.source === 'note' && editingNoteId !== msg.id && (
                               <button onClick={() => { setEditingNoteId(msg.id); setEditNoteText(msg.content || '') }} style={{ background: 'none', border: 'none', fontSize: 12, cursor: 'pointer', opacity: 0.6 }}>✏️ ערוך</button>
