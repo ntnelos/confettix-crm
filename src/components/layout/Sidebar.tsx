@@ -8,9 +8,9 @@ import GlobalSearchModal from '../GlobalSearchModal'
 
 const navItems = [
   { href: '/dashboard', label: 'לוח בקרה', icon: GridIcon },
+  { href: '/leads', label: 'לידים', icon: InboxIcon },
   { href: '/organizations', label: 'ארגונים', icon: BuildingIcon },
   { href: '/contacts', label: 'אנשי קשר', icon: UsersIcon },
-  { href: '/leads', label: 'לידים', icon: InboxIcon },
   { href: '/opportunities', label: 'הזדמנויות', icon: TrendingIcon },
   { href: '/quotes', label: 'הצעות מחיר', icon: FileTextIcon },
   { href: '/orders', label: 'הזמנות', icon: ShoppingBagIcon },
@@ -77,9 +77,9 @@ export default function Sidebar() {
       </div>
 
       {/* Overlay */}
-      <div 
-        className={`sidebar-overlay ${isMobileOpen ? 'show' : ''}`} 
-        onClick={() => setIsMobileOpen(false)} 
+      <div
+        className={`sidebar-overlay ${isMobileOpen ? 'show' : ''}`}
+        onClick={() => setIsMobileOpen(false)}
       />
 
       {/* Sidebar */}
@@ -107,58 +107,59 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-      <nav className="sidebar-nav">
-        <button 
-          onClick={() => setSearchOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-            background: 'var(--body-bg)', border: '1px solid var(--border)', borderRadius: '8px',
-            color: 'var(--text-secondary)', fontWeight: 500, fontSize: '14px', cursor: 'pointer',
-            marginBottom: '16px', width: '100%', outline: 'none', transition: 'box-shadow 0.2s',
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-          }}
-          className="search-btn-hover"
-        >
-          <SearchIcon />
-          <span>חיפוש מהיר...</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-            <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>⌘</span>
-            <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>K</span>
-          </div>
-        </button>
-
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={pathname.startsWith(href) ? 'active' : ''}
+        <nav className="sidebar-nav">
+          <button
+            onClick={() => setSearchOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+              background: 'var(--body-bg)', border: '1px solid var(--border)', borderRadius: '8px',
+              color: 'var(--text-secondary)', fontWeight: 500, fontSize: '14px', cursor: 'pointer',
+              marginBottom: '16px', width: '100%', outline: 'none', transition: 'box-shadow 0.2s',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            }}
+            className="search-btn-hover"
           >
-            <Icon />
-            <span>{label}</span>
+            <SearchIcon />
+            <span>חיפוש מהיר...</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+              <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>⌘</span>
+              <span style={{ fontSize: 10, background: 'var(--surface-2)', padding: '2px 6px', borderRadius: 4, color: 'var(--text-muted)' }}>K</span>
+            </div>
+          </button>
+
+          {navItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={pathname.startsWith(href) ? 'active' : ''}
+            >
+              <Icon />
+              <span>{label}</span>
+            </Link>
+          ))}
+
+          <div className="divider" style={{ margin: '12px 0' }} />
+          <span className="sidebar-section-label">הגדרות</span>
+
+          <Link href="/settings" className={pathname.startsWith('/settings') ? 'active' : ''}>
+            <SettingsIcon />
+            <span>הגדרות</span>
           </Link>
-        ))}
+        </nav>
 
-        <div className="divider" style={{ margin: '12px 0' }} />
-        <span className="sidebar-section-label">הגדרות</span>
-
-        <Link href="/settings" className={pathname.startsWith('/settings') ? 'active' : ''}>
-          <SettingsIcon />
-          <span>הגדרות</span>
-        </Link>
-      </nav>
-
-      {/* User */}
-      <div className="sidebar-bottom">
-        <div className="sidebar-user" onClick={handleLogout} title="התנתק">
-          <div className="sidebar-avatar">{userInitial}</div>
-          <div className="sidebar-user-info">
-            <div className="sidebar-user-name">{userName || 'משתמש'}</div>
-            <div className="sidebar-user-role">לחץ לצאת</div>
+        {/* User */}
+        <div className="sidebar-bottom">
+          <div className="sidebar-user" onClick={handleLogout} title="התנתק">
+            <div className="sidebar-avatar">{userInitial}</div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{userName || 'משתמש'}</div>
+              <div className="sidebar-user-role">לחץ לצאת</div>
+            </div>
           </div>
         </div>
-      </div>
-      <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <style dangerouslySetInnerHTML={{__html: `
+        <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+        <style dangerouslySetInnerHTML={{
+          __html: `
         .search-btn-hover:hover {
           border-color: var(--pink) !important;
           color: var(--pink) !important;

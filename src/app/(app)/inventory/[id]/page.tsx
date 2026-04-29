@@ -408,15 +408,15 @@ export default function InventoryItemPage() {
             <p className="page-subtitle text-pink font-semibold mt-1 text-center md:text-right">סה"כ במלאי: {totalQty} יח'</p>
           </div>
           <div className="actions-row w-full" style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'stretch', justifyContent: 'space-between' }}>
-            <Link 
-              href="/inventory/new" 
+            <Link
+              href="/inventory/new"
               className="btn btn-secondary"
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, background: '#fff', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 12, height: 'auto' }}
             >
               <PlusIcon />
               <span className="whitespace-nowrap">פריט חדש</span>
             </Link>
-            <button 
+            <button
               className="btn btn-primary"
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, borderRadius: 12, height: 'auto' }}
               onClick={() => {
@@ -428,11 +428,11 @@ export default function InventoryItemPage() {
               <EditIcon />
               <span className="whitespace-nowrap">עריכה</span>
             </button>
-            <button 
+            <button
               className="btn btn-primary"
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, borderRadius: 12, height: 'auto' }}
               onClick={() => {
-                if(item.inventory_levels.length >= 2) {
+                if (item.inventory_levels.length >= 2) {
                   setTransferFromId(item.inventory_levels[0].id)
                   setTransferToId(item.inventory_levels[1].id)
                 }
@@ -630,48 +630,55 @@ export default function InventoryItemPage() {
             </div>
 
             {/* History Logs */}
-            <div className="card p-0 overflow-hidden">
+            <div className="card p-0" style={{ overflowX: 'hidden', borderRadius: 12 }}>
               <div className="p-6 border-b border-gray-100 dark:border-gray-800">
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">היסטוריית פעולות</h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-right text-sm" style={{ minWidth: 650 }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table className="w-full text-right text-sm" style={{ minWidth: 620 }}>
                   <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500">
                     <tr>
-                      <th className="py-3 px-6 font-medium">תאריך</th>
-                      <th className="py-3 px-6 font-medium">פעולה</th>
-                      <th className="py-3 px-6 font-medium">מיקום</th>
-                      <th className="py-3 px-6 font-medium">שינוי</th>
-                      <th className="py-3 px-6 font-medium">יתרה חדשה</th>
-                      <th className="py-3 px-6 font-medium">הערות / משתמש</th>
+                      <th className="py-3 px-4 font-medium whitespace-nowrap">תאריך</th>
+                      <th className="py-3 px-4 font-medium whitespace-nowrap">פעולה</th>
+                      <th className="py-3 px-4 font-medium whitespace-nowrap">מיקום</th>
+                      <th className="py-3 px-4 font-medium whitespace-nowrap">שינוי</th>
+                      <th className="py-3 px-4 font-medium whitespace-nowrap">יתרה</th>
+                      <th className="py-3 px-4 font-medium">הערות / משתמש</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
                     {logs.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-gray-500">אין היסטוריית פעולות לפריט זה</td>
                       </tr>
                     ) : (
                       logs.map(log => (
-                        <tr key={log.id} className="hover:bg-gray-50/50">
-                          <td className="py-3 px-6 text-gray-500 whitespace-nowrap">
-                            {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                        <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                          {/* Date */}
+                          <td className="py-3 px-4 text-gray-500 whitespace-nowrap text-xs">
+                            <div>{new Date(log.created_at || '').toLocaleDateString('he-IL')}</div>
+                            <div className="opacity-60">{new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>
                           </td>
-                          <td className="py-3 px-6">
+                          {/* Action */}
+                          <td className="py-3 px-4 whitespace-nowrap">
                             {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-1 rounded text-xs font-bold">הכנסה</span>}
                             {log.type === 'REMOVE' && <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">הוצאה</span>}
                             {log.type === 'TRANSFER' && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs font-bold">העברה</span>}
                             {log.type === 'SET' && <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs font-bold">עדכון</span>}
                           </td>
-                          <td className="py-3 px-6 font-medium">{log.inventory_level?.location}</td>
-                          <td className="py-3 px-6 font-bold" dir="ltr">
+                          {/* Location */}
+                          <td className="py-3 px-4 font-medium whitespace-nowrap">{log.inventory_level?.location || '—'}</td>
+                          {/* Change */}
+                          <td className="py-3 px-4 font-bold whitespace-nowrap" dir="ltr">
                             <span className={log.quantity_changed > 0 ? 'text-green-600' : 'text-red-500'}>
                               {log.quantity_changed > 0 ? `+${log.quantity_changed}` : log.quantity_changed}
                             </span>
                           </td>
-                          <td className="py-3 px-6 font-semibold">{log.new_quantity}</td>
-                          <td className="py-3 px-6 text-gray-500">
-                            <div className="truncate max-w-[180px]" title={log.notes || ''}>{log.notes || '-'}</div>
+                          {/* New Balance */}
+                          <td className="py-3 px-4 font-semibold whitespace-nowrap">{log.new_quantity}</td>
+                          {/* Notes / User */}
+                          <td className="py-3 px-4 text-gray-500 max-w-[200px]">
+                            <div className="truncate text-sm" title={log.notes || ''}>{log.notes || '—'}</div>
                             <div className="text-[10px] opacity-70 mt-0.5">{log.user?.full_name || 'מערכת'}</div>
                           </td>
                         </tr>

@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
       currency: 'ILS',
       lang: 'he',
       income: income,
-      description: oppForDesc?.subject || '', // Subject maps to document description
+      description: order.order_number || oppForDesc?.subject || '', // Order number maps to document description
       remarks: oppForDesc?.description || '', // opp description maps to document remarks
       footer: invoiceFooter,
       email: {
