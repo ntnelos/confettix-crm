@@ -34,10 +34,10 @@ interface Lead {
 
 interface LeadMessage {
   id: string
-  lead_id: string
+  lead_id?: string
   source: string
   content: string | null
-  created_at: string
+  created_at?: string | null
 }
 
 interface MatchedContact {
@@ -96,7 +96,7 @@ export default function LeadsPage() {
   /* ─── Data fetching ─── */
   const fetchLeads = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('leads').select('*, lead_messages(id, content, created_at, source)').eq('status', 'new').order('created_at', { ascending: false })
+    const { data } = await supabase.from('leads').select('*, lead_messages(id, lead_id, content, created_at, source)').eq('status', 'new').order('created_at', { ascending: false })
     if (data) setLeads(data as Lead[])
     setLoading(false)
   }, [supabase])
@@ -104,7 +104,7 @@ export default function LeadsPage() {
   const fetchHandledLeads = useCallback(async () => {
     const { data } = await (supabase
       .from('leads')
-      .select('*, contacts:matched_contact_id(id, name, organization_id, organizations(id, name)), rejection_reason:rejection_reason_id(label), lead_messages(id, content, created_at, source)')
+      .select('*, contacts:matched_contact_id(id, name, organization_id, organizations(id, name)), rejection_reason:rejection_reason_id(label), lead_messages(id, lead_id, content, created_at, source)')
       .in('status', ['converted', 'trash'])
       .order('created_at', { ascending: false })
       .limit(200) as any)
