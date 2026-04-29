@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import NewLeadModal from '@/components/NewLeadModal'
 
 interface Organization {
   id: string
@@ -63,6 +64,9 @@ export default function ContactDetailsPage() {
   const [showInquiryForm, setShowInquiryForm] = useState(false)
   const [newInquiry, setNewInquiry] = useState({ source: 'website' as string, message: '' })
   const [savingInquiry, setSavingInquiry] = useState(false)
+
+  // Lead Modal
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -312,6 +316,13 @@ export default function ContactDetailsPage() {
           </div>
           
           <div style={{ display: 'flex', gap: 12 }}>
+            <button 
+              onClick={() => setShowNewLeadModal(true)}
+              className="btn btn-secondary"
+              style={{ background: 'white', color: 'var(--pink)', borderColor: 'white', fontWeight: 600 }}
+            >
+              <PlusIcon /> ליד חדש
+            </button>
             <Link 
               href="/contacts/new"
               className="btn btn-secondary"
@@ -777,6 +788,17 @@ export default function ContactDetailsPage() {
             </form>
           </div>
         </div>
+      )}
+      {/* New Lead Modal */}
+      {showNewLeadModal && (
+        <NewLeadModal
+          prefilledContactId={contact.id}
+          onClose={() => setShowNewLeadModal(false)}
+          onSuccess={() => {
+            setShowNewLeadModal(false)
+            router.push('/leads')
+          }}
+        />
       )}
     </>
   )

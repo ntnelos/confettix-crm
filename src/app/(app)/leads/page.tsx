@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import NewLeadModal from '@/components/NewLeadModal'
 
 /* ─── Types ─── */
 interface Lead {
@@ -88,6 +89,9 @@ export default function LeadsPage() {
   const [savingNote, setSavingNote] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editNoteText, setEditNoteText] = useState('')
+
+  // New Lead Modal
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false)
 
   /* ─── Data fetching ─── */
   const fetchLeads = useCallback(async () => {
@@ -341,6 +345,14 @@ export default function LeadsPage() {
             <p className="page-subtitle">פניות חדשות מהאתר ו-WhatsApp</p>
           </div>
           <div className="actions-row">
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setShowNewLeadModal(true)}
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <span style={{ fontSize: 16 }}>+</span>
+              <span>ליד חדש</span>
+            </button>
             {/* View Toggle */}
             <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 10, padding: 4, gap: 2 }}>
               {(['new', 'handled'] as const).map(v => (
@@ -853,6 +865,47 @@ export default function LeadsPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* Notes Modal */}
+      {quickNoteLead && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>תיעוד מהיר</h2>
+              <button className="icon-btn" onClick={() => { setQuickNoteLead(null); setNewNote('') }}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                הוסף תיעוד עבור <strong>{quickNoteLead.sender_name || 'לקוח ללא שם'}</strong>
+              </div>
+              <textarea
+                className="form-input"
+                rows={4}
+                placeholder="כתוב את התיעוד כאן..."
+                value={newNote}
+                onChange={e => setNewNote(e.target.value)}
+                autoFocus
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-secondary" onClick={() => { setQuickNoteLead(null); setNewNote('') }}>ביטול</button>
+                <button className="btn btn-primary" onClick={() => handleSaveNote(quickNoteLead.id)} disabled={!newNote.trim() || savingNote}>
+                  {savingNote ? 'שומר...' : 'שמור תיעוד'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Lead Modal */}
+      {showNewLeadModal && (
+        <NewLeadModal
+          onClose={() => setShowNewLeadModal(false)}
+          onSuccess={() => {
+            setShowNewLeadModal(false)
+            fetchLeads()
+          }}
+        />
       )}
     </>
   )

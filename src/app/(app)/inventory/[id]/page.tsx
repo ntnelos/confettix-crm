@@ -22,7 +22,7 @@ export default function InventoryItemPage() {
   const { id } = useParams()
   const router = useRouter()
   const supabase = createClient()
-  
+
   const [item, setItem] = useState<ItemWithDetails | null>(null)
   const [logs, setLogs] = useState<InventoryLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,25 +33,25 @@ export default function InventoryItemPage() {
   const [savingDetails, setSavingDetails] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteText, setNoteText] = useState('')
-  
+
   const [allTags, setAllTags] = useState<string[]>([])
   const [showAddLocationModal, setShowAddLocationModal] = useState(false)
   const [allLocations, setAllLocations] = useState<any[]>([])
   const [selectedNewLocation, setSelectedNewLocation] = useState('')
   const [isAddingLocation, setIsAddingLocation] = useState(false)
-  
+
   // Modal states
   const [showAdjustModal, setShowAdjustModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedLevelId, setSelectedLevelId] = useState<string>('')
   const [categories, setCategories] = useState<string[]>([])
-  
+
   // Form states
   const [adjustAmount, setAdjustAmount] = useState<number>(1)
   const [adjustType, setAdjustType] = useState<'ADD' | 'REMOVE'>('ADD')
   const [adjustNotes, setAdjustNotes] = useState('')
-  
+
   const [transferAmount, setTransferAmount] = useState<number>(1)
   const [transferFromId, setTransferFromId] = useState<string>('')
   const [transferToId, setTransferToId] = useState<string>('')
@@ -64,20 +64,20 @@ export default function InventoryItemPage() {
 
   const fetchItemData = async () => {
     setLoading(true)
-    
+
     // Fetch Item & Levels
     const { data: itemData, error: itemError } = await supabase
       .from('items')
       .select('*, inventory_levels(*)')
       .eq('id', id as string)
       .single()
-      
+
     if (itemError) {
       console.error(itemError)
       router.push('/inventory')
       return
     }
-    
+
     const typedItemData = itemData as unknown as ItemWithDetails;
     setItem(typedItemData)
     setEditFormData({
@@ -91,18 +91,18 @@ export default function InventoryItemPage() {
 
     const { data: catData } = await (supabase.from('item_categories') as any).select('name').order('name')
     if (catData) setCategories(catData.map((c: any) => c.name))
-    
+
     // Fetch all unique tags for suggestions
     const { data: allItemsTags } = await supabase.from('items').select('tags')
     if (allItemsTags) {
       const uniqueTags = Array.from(new Set((allItemsTags as any[]).flatMap(i => i.tags || []))).sort()
       setAllTags(uniqueTags as string[])
     }
-    
+
     // Fetch Logs
     if (typedItemData?.inventory_levels?.length > 0) {
       const levelIds = typedItemData.inventory_levels.map((l: any) => l.id)
-      
+
       const { data: logsData, error: logsError } = await supabase
         .from('inventory_logs')
         .select(`
@@ -113,7 +113,7 @@ export default function InventoryItemPage() {
         .in('inventory_id', levelIds)
         .order('created_at', { ascending: false })
         .limit(50)
-        
+
       if (logsError) {
         console.error('Error fetching inventory logs:', logsError)
       } else if (logsData) {
@@ -126,7 +126,7 @@ export default function InventoryItemPage() {
         setAllLocations(locationsData)
       }
     }
-    
+
     setLoading(false)
   }
 
@@ -180,35 +180,35 @@ export default function InventoryItemPage() {
   const handleAdjustment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!item || !selectedLevelId || isSavingAdjustment) return
-    
+
     setIsSavingAdjustment(true)
     const level = item.inventory_levels.find(l => l.id === selectedLevelId)
     if (!level) {
       setIsSavingAdjustment(false)
       return
     }
-    
+
     const qtyChange = adjustType === 'ADD' ? adjustAmount : -Math.abs(adjustAmount)
     const newQty = (level.quantity || 0) + qtyChange
-    
+
     if (newQty < 0) {
       alert('פעולה זו תגרום לכמות שלילית במלאי!')
       setIsSavingAdjustment(false)
       return
     }
-    
+
     try {
       // 1. Update level
       const { error: updateError } = await (supabase.from('inventory_levels') as any)
         .update({ quantity: newQty })
         .eq('id', level.id)
-        
+
       if (updateError) {
         alert(`שגיאה בעדכון מלאי: ${updateError.message}`)
         setIsSavingAdjustment(false)
         return
       }
-      
+
       // 2. Add log
       const { data: userData } = await supabase.auth.getUser()
       await (supabase.from('inventory_logs') as any).insert({
@@ -219,7 +219,7 @@ export default function InventoryItemPage() {
         new_quantity: newQty,
         notes: adjustNotes || null
       })
-      
+
       setShowAdjustModal(false)
       setAdjustAmount(1)
       setAdjustNotes('')
@@ -234,26 +234,26 @@ export default function InventoryItemPage() {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!item || !transferFromId || !transferToId || transferFromId === transferToId || isSavingAdjustment) return
-    
+
     setIsSavingAdjustment(true)
     const fromLevel = item.inventory_levels.find(l => l.id === transferFromId)
     const toLevel = item.inventory_levels.find(l => l.id === transferToId)
-    
+
     if (!fromLevel || !toLevel) {
       setIsSavingAdjustment(false)
       return
     }
-    
+
     if ((fromLevel.quantity || 0) < transferAmount) {
       alert(`אין מספיק מלאי ב${fromLevel.location} להעברה זו.`)
       setIsSavingAdjustment(false)
       return
     }
-    
+
     try {
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData?.user?.id || null
-      
+
       // Update FROM
       const newFromQty = (fromLevel.quantity || 0) - transferAmount
       await (supabase.from('inventory_levels') as any).update({ quantity: newFromQty }).eq('id', fromLevel.id)
@@ -265,7 +265,7 @@ export default function InventoryItemPage() {
         new_quantity: newFromQty,
         notes: transferNotes ? `העברה אל ${toLevel.location}: ${transferNotes}` : `העברה אל ${toLevel.location}`
       })
-      
+
       // Update TO
       const newToQty = (toLevel.quantity || 0) + transferAmount
       await (supabase.from('inventory_levels') as any).update({ quantity: newToQty }).eq('id', toLevel.id)
@@ -277,7 +277,7 @@ export default function InventoryItemPage() {
         new_quantity: newToQty,
         notes: transferNotes ? `קבלה מ${fromLevel.location}: ${transferNotes}` : `קבלה מ${fromLevel.location}`
       })
-      
+
       setShowTransferModal(false)
       setTransferAmount(1)
       setTransferNotes('')
@@ -356,13 +356,13 @@ export default function InventoryItemPage() {
   const handleAddNewLocation = async () => {
     if (!item || !selectedNewLocation) return
     setIsAddingLocation(true)
-    
+
     const { error } = await (supabase.from('inventory_levels') as any).insert({
       item_id: item.id,
       location: selectedNewLocation,
       quantity: 0
     })
-    
+
     if (error) {
       alert(`שגיאה בהוספת מיקום: ${error.message}`)
     } else {
@@ -396,7 +396,7 @@ export default function InventoryItemPage() {
 
       <div className="page-body">
         <div className="page-header flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+          <div className="w-full md:w-auto">
             <div className="breadcrumb">
               <Link href="/dashboard">לוח בקרה</Link>
               <span className="breadcrumb-sep">/</span>
@@ -404,21 +404,21 @@ export default function InventoryItemPage() {
               <span className="breadcrumb-sep">/</span>
               <span>{item.name}</span>
             </div>
-            <h1 className="page-title">{item.name}</h1>
-            <p className="page-subtitle text-pink font-semibold mt-1">סה"כ במלאי: {totalQty} יח'</p>
+            <h1 className="page-title text-center md:text-right">{item.name}</h1>
+            <p className="page-subtitle text-pink font-semibold mt-1 text-center md:text-right">סה"כ במלאי: {totalQty} יח'</p>
           </div>
-          <div className="actions-row w-full md:w-auto">
+          <div className="actions-row w-full" style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'stretch', justifyContent: 'space-between' }}>
             <Link 
               href="/inventory/new" 
-              className="btn btn-secondary w-full md:w-auto justify-center"
-              style={{ padding: '7px 14px', fontSize: 13, background: '#fff', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              className="btn btn-secondary"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, background: '#fff', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 12, height: 'auto' }}
             >
               <PlusIcon />
-              פריט חדש
+              <span className="whitespace-nowrap">פריט חדש</span>
             </Link>
             <button 
-              style={{ padding: '7px 14px', fontSize: 13 }}
-              className="btn btn-primary w-full md:w-auto justify-center"
+              className="btn btn-primary"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, borderRadius: 12, height: 'auto' }}
               onClick={() => {
                 setEditingDetails(true)
                 // scroll to card smoothly
@@ -426,11 +426,11 @@ export default function InventoryItemPage() {
               }}
             >
               <EditIcon />
-              עריכה
+              <span className="whitespace-nowrap">עריכה</span>
             </button>
             <button 
-              style={{ padding: '7px 14px', fontSize: 13 }}
-              className="btn btn-primary w-full md:w-auto justify-center"
+              className="btn btn-primary"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '8px 2px', fontSize: 10, borderRadius: 12, height: 'auto' }}
               onClick={() => {
                 if(item.inventory_levels.length >= 2) {
                   setTransferFromId(item.inventory_levels[0].id)
@@ -440,7 +440,7 @@ export default function InventoryItemPage() {
               }}
             >
               <ArrowRightLeftIcon />
-              העברת מלאי
+              <span className="whitespace-nowrap">העברת מלאי</span>
             </button>
           </div>
         </div>
@@ -451,7 +451,7 @@ export default function InventoryItemPage() {
           <div className="col-span-1 md:col-span-3">
             <div id="item-detail-card" className="card p-6 h-full">
               <div style={{ display: 'flex', flexDirection: 'row', gap: '32px', flexWrap: 'wrap' }}>
-                
+
                 {/* Right Side: Image (Approx 1/3) */}
                 <div style={{ flex: '1 1 300px', maxWidth: '350px' }}>
                   <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -570,8 +570,8 @@ export default function InventoryItemPage() {
             <div className="card p-6">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100" style={{ margin: 0 }}>מלאי לפי מיקום</h3>
-                <button 
-                  className="btn btn-secondary" 
+                <button
+                  className="btn btn-secondary"
                   style={{ padding: '5px 12px', fontSize: 12, borderRadius: 10 }}
                   onClick={() => setShowAddLocationModal(true)}
                 >
@@ -656,7 +656,7 @@ export default function InventoryItemPage() {
                       logs.map(log => (
                         <tr key={log.id} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50">
                           <td className="py-3 px-6 text-gray-500">
-                            {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'})}
+                            {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="py-3 px-6">
                             {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-1 rounded text-xs">הכנסה</span>}
@@ -694,18 +694,18 @@ export default function InventoryItemPage() {
             <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 28 }}>
               מיקום: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.inventory_levels.find(l => l.id === selectedLevelId)?.location}</span>
             </p>
-            
+
             <form onSubmit={handleAdjustment}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                 <div style={{ display: 'flex', gap: 8, padding: '5px', background: 'var(--surface-2)', borderRadius: 14 }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: adjustType === 'ADD' ? 'var(--pink)' : 'transparent', color: adjustType === 'ADD' ? '#fff' : 'var(--text-muted)' }}
                     onClick={() => setAdjustType('ADD')}
                   >
                     + הכנסה
                   </button>
-                  <button 
+                  <button
                     type="button"
                     style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: adjustType === 'REMOVE' ? '#fee2e2' : 'transparent', color: adjustType === 'REMOVE' ? '#dc2626' : 'var(--text-muted)' }}
                     onClick={() => setAdjustType('REMOVE')}
@@ -713,20 +713,20 @@ export default function InventoryItemPage() {
                     − הוצאה
                   </button>
                 </div>
-                
+
                 <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ fontSize: 13, marginBottom: 6 }}>כמות לעדכון</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setAdjustAmount(prev => Math.max(1, prev - 1))}
                       style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       −
                     </button>
-                    <input 
-                      type="number" 
-                      min="1" 
+                    <input
+                      type="number"
+                      min="1"
                       required
                       className="form-input"
                       style={{ flex: 1, fontSize: 24, fontWeight: 800, padding: '12px 16px', textAlign: 'center' }}
@@ -734,8 +734,8 @@ export default function InventoryItemPage() {
                       onChange={e => setAdjustAmount(parseInt(e.target.value) || 0)}
                       onFocus={(e) => e.target.select()}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setAdjustAmount(prev => prev + 1)}
                       style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
@@ -743,10 +743,10 @@ export default function InventoryItemPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ fontSize: 13, marginBottom: 6 }}>הערות / סיבת התנועה</label>
-                  <textarea 
+                  <textarea
                     className="form-input"
                     rows={3}
                     placeholder="למשל: סחורה חדשה, נזק, העברה לאירוע..."
@@ -756,7 +756,7 @@ export default function InventoryItemPage() {
                   />
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
                 <button type="button" style={{ padding: '10px 20px' }} className="btn btn-secondary" onClick={() => setShowAdjustModal(false)} disabled={isSavingAdjustment}>ביטול</button>
                 <button type="submit" style={{ padding: '10px 24px' }} className="btn btn-primary" disabled={isSavingAdjustment}>
@@ -773,13 +773,13 @@ export default function InventoryItemPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="card" style={{ width: '100%', maxWidth: '500px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', borderRadius: '20px' }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 28 }}>העברת מלאי בין מיקומים</h2>
-            
+
             <form onSubmit={handleTransfer}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: 13 }}>ממיקום</label>
-                    <select 
+                    <select
                       className="form-input"
                       style={{ padding: '10px' }}
                       value={transferFromId}
@@ -795,7 +795,7 @@ export default function InventoryItemPage() {
 
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: 13 }}>למיקום</label>
-                    <select 
+                    <select
                       className="form-input"
                       style={{ padding: '10px' }}
                       value={transferToId}
@@ -813,16 +813,16 @@ export default function InventoryItemPage() {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ fontSize: 13 }}>כמות להעברה</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setTransferAmount(prev => Math.max(1, prev - 1))}
                       style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       −
                     </button>
-                    <input 
-                      type="number" 
-                      min="1" 
+                    <input
+                      type="number"
+                      min="1"
                       required
                       className="form-input"
                       style={{ flex: 1, fontSize: 22, fontWeight: 700, padding: '12px', textAlign: 'center' }}
@@ -830,8 +830,8 @@ export default function InventoryItemPage() {
                       onChange={e => setTransferAmount(parseInt(e.target.value) || 0)}
                       onFocus={(e) => e.target.select()}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setTransferAmount(prev => prev + 1)}
                       style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
@@ -842,8 +842,8 @@ export default function InventoryItemPage() {
 
                 <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ fontSize: 13 }}>הערות (לא חובה)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="form-input"
                     placeholder="סיבת ההעברה..."
                     style={{ padding: '10px 14px' }}
@@ -852,7 +852,7 @@ export default function InventoryItemPage() {
                   />
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 36 }}>
                 <button type="button" style={{ padding: '10px 20px' }} className="btn btn-secondary" onClick={() => setShowTransferModal(false)} disabled={isSavingAdjustment}>ביטול</button>
                 <button type="submit" style={{ padding: '10px 24px' }} className="btn btn-primary" disabled={!transferFromId || !transferToId || transferFromId === transferToId || isSavingAdjustment}>
@@ -869,14 +869,14 @@ export default function InventoryItemPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#1a1c1c] rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">עריכת פריט</h2>
-            
+
             <form onSubmit={handleEditItem}>
               {error && <div className="error-box" style={{ marginBottom: 20 }}>{error}</div>}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">שם הפריט</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     className="w-full input"
                     value={editFormData.name}
@@ -887,8 +887,8 @@ export default function InventoryItemPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">קטגוריה</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       list="edit-categories-list"
                       className="w-full input"
                       placeholder="בחר או הקלד חדשה..."
@@ -903,7 +903,7 @@ export default function InventoryItemPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">עלות פריט (₪)</label>
-                    <input 
+                    <input
                       type="number"
                       step="0.01"
                       min="0"
@@ -917,14 +917,14 @@ export default function InventoryItemPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">תגיות (מופרדות בפסיק)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="w-full input"
                     value={editFormData.tags}
                     onChange={e => setEditFormData(p => ({ ...p, tags: e.target.value }))}
                     placeholder="למשל: חשמלי, שביר, מסיבה"
                   />
-                  
+
                   {allTags.length > 0 && (
                     <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', width: '100%', marginBottom: 2 }}>תגיות קיימות (לחץ להוספה):</span>
@@ -976,8 +976,8 @@ export default function InventoryItemPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">קישור לתמונה (URL)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="w-full input"
                     value={editFormData.image_url}
                     onChange={e => setEditFormData(p => ({ ...p, image_url: e.target.value }))}
@@ -986,7 +986,7 @@ export default function InventoryItemPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">תיאור</label>
-                  <textarea 
+                  <textarea
                     className="w-full input"
                     rows={3}
                     value={editFormData.description}
@@ -994,7 +994,7 @@ export default function InventoryItemPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)} disabled={uploading}>ביטול</button>
                 <button type="submit" className="btn btn-primary" disabled={uploading}>
@@ -1012,12 +1012,12 @@ export default function InventoryItemPage() {
           <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', borderRadius: '20px' }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>הוספת מיקום מלאי לפריט</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>בחר מיקום להוספה לרשימת המלאי של פריט זה.</p>
-            
+
             <div className="form-group">
               <label style={{ fontSize: 12 }}>בחר מיקום</label>
-              <select 
-                className="form-input" 
-                value={selectedNewLocation} 
+              <select
+                className="form-input"
+                value={selectedNewLocation}
                 onChange={e => setSelectedNewLocation(e.target.value)}
                 style={{ padding: '10px' }}
               >
@@ -1036,9 +1036,9 @@ export default function InventoryItemPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 32 }}>
               <button className="btn btn-secondary" onClick={() => setShowAddLocationModal(false)}>ביטול</button>
-              <button 
-                className="btn btn-primary" 
-                disabled={!selectedNewLocation || isAddingLocation} 
+              <button
+                className="btn btn-primary"
+                disabled={!selectedNewLocation || isAddingLocation}
                 onClick={handleAddNewLocation}
               >
                 {isAddingLocation ? 'מוסיף...' : 'הוסף פריט למיקום'}
@@ -1064,7 +1064,7 @@ function BellIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="17" height="17"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
 }
 function ArrowRightLeftIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="m16 3 4 4-4 4" /><path d="M20 7H4" /><path d="m8 21-4-4 4-4" /><path d="M4 17h16" /></svg>
 }
 function EditIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
