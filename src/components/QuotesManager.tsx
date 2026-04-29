@@ -591,12 +591,29 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
                       flex: 1, padding: '2px 4px', cursor: activeQuote?.status === 'approved' ? 'not-allowed' : 'text'
                     }}
                   />
-                  {/* Order Number Badge on the left */}
+                  {/* Quote Number Badge */}
+                  {activeQuote?.quote_number && (
+                    <span style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                      fontFamily: 'monospace'
+                    }}>
+                      {activeQuote.quote_number}
+                    </span>
+                  )}
+                  {/* Order Number Badge */}
                   {activeQuote?.orders?.[0]?.order_number && (
                     <span style={{
-                      background: 'rgba(255,255,255,0.12)',
-                      border: '1px solid rgba(255,255,255,0.25)',
-                      color: 'rgba(255,255,255,0.9)',
+                      background: 'rgba(76,175,80,0.2)',
+                      border: '1px solid rgba(76,175,80,0.4)',
+                      color: '#a7f3b0',
                       fontSize: 13,
                       fontWeight: 700,
                       padding: '3px 10px',
