@@ -635,10 +635,11 @@ export default function InventoryItemPage() {
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">היסטוריית פעולות</h3>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-right text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 hidden sm:table-header-group">
+                <table className="w-full text-right text-sm" style={{ minWidth: 650 }}>
+                  <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500">
                     <tr>
-                      <th className="py-3 px-6 font-medium">תאריך ופעולה</th>
+                      <th className="py-3 px-6 font-medium">תאריך</th>
+                      <th className="py-3 px-6 font-medium">פעולה</th>
                       <th className="py-3 px-6 font-medium">מיקום</th>
                       <th className="py-3 px-6 font-medium">שינוי</th>
                       <th className="py-3 px-6 font-medium">יתרה חדשה</th>
@@ -648,62 +649,30 @@ export default function InventoryItemPage() {
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
                     {logs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">אין היסטוריית פעולות לפריט זה</td>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">אין היסטוריית פעולות לפריט זה</td>
                       </tr>
                     ) : (
                       logs.map(log => (
-                        <tr key={log.id} className="flex flex-col sm:table-row py-4 sm:py-0 hover:bg-gray-50/50">
-                          {/* Date & Action */}
-                          <td className="py-2 sm:py-4 px-6">
-                            <div className="flex justify-between sm:block">
-                              <span className="sm:hidden font-bold text-gray-400">תאריך ופעולה:</span>
-                              <div>
-                                <div className="text-xs text-gray-400">
-                                  {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                                <div className="mt-1">
-                                  {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[10px] font-bold">הכנסה</span>}
-                                  {log.type === 'REMOVE' && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px] font-bold">הוצאה</span>}
-                                  {log.type === 'TRANSFER' && <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px] font-bold">העברה</span>}
-                                  {log.type === 'SET' && <span className="text-gray-600 bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold">עדכון כמות</span>}
-                                </div>
-                              </div>
-                            </div>
+                        <tr key={log.id} className="hover:bg-gray-50/50">
+                          <td className="py-3 px-6 text-gray-500 whitespace-nowrap">
+                            {new Date(log.created_at || '').toLocaleDateString('he-IL')} {new Date(log.created_at || '').toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                           </td>
-                          {/* Location */}
-                          <td className="py-2 sm:py-4 px-6">
-                            <div className="flex justify-between sm:block">
-                              <span className="sm:hidden font-bold text-gray-400">מיקום:</span>
-                              <span className="font-medium">{log.inventory_level?.location}</span>
-                            </div>
+                          <td className="py-3 px-6">
+                            {log.type === 'ADD' && <span className="text-green-600 bg-green-50 px-2 py-1 rounded text-xs font-bold">הכנסה</span>}
+                            {log.type === 'REMOVE' && <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">הוצאה</span>}
+                            {log.type === 'TRANSFER' && <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs font-bold">העברה</span>}
+                            {log.type === 'SET' && <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded text-xs font-bold">עדכון</span>}
                           </td>
-                          {/* Change */}
-                          <td className="py-2 sm:py-4 px-6">
-                            <div className="flex justify-between sm:block">
-                              <span className="sm:hidden font-bold text-gray-400">שינוי:</span>
-                              <span className="font-bold" dir="ltr">
-                                <span className={log.quantity_changed > 0 ? 'text-green-600' : 'text-red-500'}>
-                                  {log.quantity_changed > 0 ? `+${log.quantity_changed}` : log.quantity_changed}
-                                </span>
-                              </span>
-                            </div>
+                          <td className="py-3 px-6 font-medium">{log.inventory_level?.location}</td>
+                          <td className="py-3 px-6 font-bold" dir="ltr">
+                            <span className={log.quantity_changed > 0 ? 'text-green-600' : 'text-red-500'}>
+                              {log.quantity_changed > 0 ? `+${log.quantity_changed}` : log.quantity_changed}
+                            </span>
                           </td>
-                          {/* Balance */}
-                          <td className="py-2 sm:py-4 px-6">
-                            <div className="flex justify-between sm:block">
-                              <span className="sm:hidden font-bold text-gray-400">יתרה חדשה:</span>
-                              <span className="font-semibold text-gray-700">{log.new_quantity}</span>
-                            </div>
-                          </td>
-                          {/* Notes / User */}
-                          <td className="py-2 sm:py-4 px-6">
-                            <div className="flex flex-col sm:block">
-                              <span className="sm:hidden font-bold text-gray-400 mb-1">הערות ומשתמש:</span>
-                              <div className="text-gray-600 text-xs sm:text-sm">
-                                <div className="break-words max-w-full" title={log.notes || ''}>{log.notes || '-'}</div>
-                                <div className="text-[10px] opacity-70 mt-0.5 font-medium">{log.user?.full_name || 'מערכת'}</div>
-                              </div>
-                            </div>
+                          <td className="py-3 px-6 font-semibold">{log.new_quantity}</td>
+                          <td className="py-3 px-6 text-gray-500">
+                            <div className="truncate max-w-[180px]" title={log.notes || ''}>{log.notes || '-'}</div>
+                            <div className="text-[10px] opacity-70 mt-0.5">{log.user?.full_name || 'מערכת'}</div>
                           </td>
                         </tr>
                       ))
