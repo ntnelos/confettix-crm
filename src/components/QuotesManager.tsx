@@ -481,47 +481,25 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
     if (!window.confirm('האם לאשר הצעת מחיר זו? ההזדמנות תעבור לסטטוס "בטיפול" וסכום העסקה יעודכן.')) return;
     setIsDuplicating(true)
     const sourceQuote = quotes.find(q => q.id === quoteId)
-    const sourceItems = itemsMap[quoteId] || []
     if (!sourceQuote) { setIsDuplicating(false); return }
 
-    // Update opportunity
+    // 1. Update opportunity status & value
     await (supabase.from('opportunities') as any).update({
       status: 'followup',
       calculated_value: sourceQuote.total_with_vat || 0
     }).eq('id', opportunityId);
 
-    // Duplicate Quote as "הזמנה" with approved status
-    const today = new Date();
-    const dateStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
-      opportunity_id: opportunityId,
-      name: `הזמנה ${dateStr}`,
-      status: 'approved',
-      subtotal: sourceQuote.subtotal,
-      vat_rate: sourceQuote.vat_rate,
-      shipping_cost: sourceQuote.shipping_cost,
-      total_with_vat: sourceQuote.total_with_vat,
-      version: 1
-    }).select().single()
+    // 2. Update the ORIGINAL quote status to approved (no duplication)
+    await (supabase.from('quotes') as any).update({
+      status: 'approved'
+    }).eq('id', quoteId);
 
-    if (newQuote) {
-      for (const item of sourceItems) {
-        await (supabase.from('quote_items') as any).insert({
-          quote_id: newQuote.id,
-          product_name: item.product_name,
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount_percent: item.discount_percent,
-          line_total: item.line_total,
-          woo_product_id: item.woo_product_id,
-          woo_product_url: item.woo_product_url,
-          image_url: item.image_url,
-          sort_order: item.sort_order
-        })
-      }
+    // 3. Create order record in orders table (linked to the original quote)
+    const order = await ensureOrderExists(quoteId)
+
+    if (order) {
       await fetchQuotes()
-      setActiveQuoteId(newQuote.id)
+      setActiveQuoteId(quoteId)
       if (onOrderUpdated) onOrderUpdated()
       router.refresh()
     }
