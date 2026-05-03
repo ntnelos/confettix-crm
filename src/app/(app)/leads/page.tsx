@@ -180,8 +180,11 @@ export default function LeadsPage() {
 
   const migrateLeadMessagesToInquiries = async (leadId: string, contactId: string, source: string) => {
     // Fetch all lead_messages for this lead
-    const { data: msgs } = await (supabase.from('lead_messages').select('*').eq('lead_id', leadId).order('created_at') as any)
-    if (!msgs || msgs.length === 0) return
+    const { data: msgs, error: fetchErr } = await (supabase.from('lead_messages').select('*').eq('lead_id', leadId).order('created_at') as any)
+    if (fetchErr) { console.error('[migrate] fetch lead_messages error:', fetchErr); return }
+    if (!msgs || msgs.length === 0) { console.log('[migrate] no lead_messages to migrate'); return }
+
+    console.log(`[migrate] migrating ${msgs.length} messages to contact_inquiries for contact ${contactId}`)
 
     // Insert each as a contact_inquiry (preserving original timestamps)
     const inquiries = msgs.map((m: any) => ({
@@ -191,7 +194,14 @@ export default function LeadsPage() {
       lead_id: leadId,
       created_at: m.created_at,
     }))
-    await (supabase.from('contact_inquiries') as any).insert(inquiries)
+    const { error: insertErr } = await (supabase.from('contact_inquiries') as any).insert(inquiries)
+    if (insertErr) {
+      console.error('[migrate] insert contact_inquiries error:', insertErr)
+      // Don't delete messages if insert failed
+      return
+    }
+
+    console.log(`[migrate] Successfully inserted ${inquiries.length} inquiries`)
 
     // Delete from lead_messages to avoid duplication
     await (supabase.from('lead_messages') as any).delete().eq('lead_id', leadId)
@@ -629,13 +639,16 @@ export default function LeadsPage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 4px' }}>
                     {leadMessages.map((msg, i) => {
-                      // Detect outgoing WhatsApp messages (sent by company)
-                      const COMPANY_PHONE = '972528350600'
+                      // Detect outgoing WhatsApp messages (sent by company via Green API)
+                      // Green API stores full webhook body: typeWebhook tells us direction
+                      // senderData.chatId is the customer, senderData.sender is our number
                       const rawPayload = (msg as any).raw_payload
+                      const webhookType: string = rawPayload?.typeWebhook || ''
+                      const senderPhone: string = rawPayload?.senderData?.sender || ''
+                      const chatId: string = rawPayload?.senderData?.chatId || ''
                       const isOutgoing = msg.source === 'whatsapp' && (
-                        rawPayload?.sender === COMPANY_PHONE ||
-                        rawPayload?.from === COMPANY_PHONE ||
-                        rawPayload?.key?.fromMe === true
+                        webhookType.startsWith('outgoing') ||
+                        senderPhone.startsWith('972528350600')
                       )
                       const isNote = msg.source === 'note'
                       const isWhatsApp = msg.source === 'whatsapp'
