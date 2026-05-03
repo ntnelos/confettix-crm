@@ -627,58 +627,97 @@ export default function LeadsPage() {
                 ) : leadMessages.length === 0 ? (
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>אין הודעות מתועדות</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {leadMessages.map((msg, i) => (
-                      <div key={msg.id} style={{ display: 'flex', gap: 10, background: msg.source === 'note' ? '#fef08a' : 'transparent', padding: msg.source === 'note' ? '8px 12px' : 0, borderRadius: 8 }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                          background: msg.source === 'whatsapp' ? '#dcfce7' : msg.source === 'note' ? '#fde047' : '#dbeafe',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 2
-                        }}>
-                          {msg.source === 'whatsapp' ? '💬' : msg.source === 'note' ? '📝' : '🌐'}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700 }}>
-                              {msg.source === 'whatsapp' ? 'ליד (לקוח)' : msg.source === 'note' ? 'תיעוד (אני)' : 'הודעת מערכת'}
-                            </span>
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                              {msg.created_at ? (
-                                <>
-                                  {new Date(msg.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })},{' '}
-                                  {new Date(msg.created_at).toLocaleDateString('he-IL')}
-                                </>
-                              ) : '-'}
-                            </span>
-                            {msg.source === 'note' && editingNoteId !== msg.id && (
-                              <button onClick={() => { setEditingNoteId(msg.id); setEditNoteText(msg.content || '') }} style={{ background: 'none', border: 'none', fontSize: 12, cursor: 'pointer', opacity: 0.6 }}>✏️ ערוך</button>
-                            )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 4px' }}>
+                    {leadMessages.map((msg, i) => {
+                      // Detect outgoing WhatsApp messages (sent by company)
+                      const COMPANY_PHONE = '972528350600'
+                      const rawPayload = (msg as any).raw_payload
+                      const isOutgoing = msg.source === 'whatsapp' && (
+                        rawPayload?.sender === COMPANY_PHONE ||
+                        rawPayload?.from === COMPANY_PHONE ||
+                        rawPayload?.key?.fromMe === true
+                      )
+                      const isNote = msg.source === 'note'
+                      const isWhatsApp = msg.source === 'whatsapp'
+
+                      if (isNote) {
+                        // Notes remain as before — yellow, full-width
+                        return (
+                          <div key={msg.id} style={{ background: '#fef9c3', border: '1px solid #fde047', padding: '8px 12px', borderRadius: 8, display: 'flex', gap: 8 }}>
+                            <span style={{ fontSize: 14 }}>📝</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#854d0e' }}>תיעוד פנימי</span>
+                                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                  {msg.created_at ? new Date(msg.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                                </span>
+                                {editingNoteId !== msg.id && (
+                                  <button onClick={() => { setEditingNoteId(msg.id); setEditNoteText(msg.content || '') }} style={{ background: 'none', border: 'none', fontSize: 11, cursor: 'pointer', opacity: 0.6, marginRight: 'auto' }}>✏️</button>
+                                )}
+                              </div>
+                              {editingNoteId === msg.id ? (
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <textarea value={editNoteText} onChange={e => setEditNoteText(e.target.value)} style={{ flex: 1, padding: 6, fontSize: 13, borderRadius: 4, border: '1px solid var(--border)', fontFamily: 'inherit' }} />
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    <button onClick={() => handleUpdateNote(msg.id)} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>✓</button>
+                                    <button onClick={() => setEditingNoteId(null)} style={{ background: '#e5e7eb', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 13, color: '#713f12', whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                              )}
+                            </div>
                           </div>
-                          {editingNoteId === msg.id ? (
-                            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                              <textarea value={editNoteText} onChange={e => setEditNoteText(e.target.value)} style={{ flex: 1, padding: 6, fontSize: 13, borderRadius: 4, border: '1px solid var(--border)', fontFamily: 'inherit' }} />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                <button onClick={() => handleUpdateNote(msg.id)} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>V</button>
-                                <button onClick={() => setEditingNoteId(null)} style={{ background: '#e5e7eb', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}>X</button>
+                        )
+                      }
+
+                      if (isWhatsApp) {
+                        // Chat bubble layout: outgoing = left (blue), incoming = right (green)
+                        return (
+                          <div key={msg.id} style={{
+                            display: 'flex',
+                            justifyContent: isOutgoing ? 'flex-start' : 'flex-end',
+                            paddingRight: isOutgoing ? 40 : 0,
+                            paddingLeft: isOutgoing ? 0 : 40,
+                          }}>
+                            <div style={{
+                              maxWidth: '75%',
+                              background: isOutgoing ? '#dbeafe' : '#dcfce7',
+                              borderRadius: isOutgoing ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+                              padding: '8px 12px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: isOutgoing ? '#1d4ed8' : '#166534', marginBottom: 4 }}>
+                                {isOutgoing ? '← שלחנו' : `${selectedLead?.sender_name || 'ליד'} ←`}
+                              </div>
+                              <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                                {msg.content?.split(/(https?:\/\/[^\s]+)/g).map((part: string, idx: number) =>
+                                  part.match(/https?:\/\/[^\s]+/) ? (
+                                    <a key={idx} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>{part}</a>
+                                  ) : <span key={idx}>{part}</span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textAlign: isOutgoing ? 'left' : 'right' }}>
+                                {msg.created_at ? new Date(msg.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
                               </div>
                             </div>
-                          ) : (
-                            <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                              {msg.content?.split(/(https?:\/\/[^\s]+)/g).map((part: string, index: number) => {
-                                if (part.match(/https?:\/\/[^\s]+/)) {
-                                  return (
-                                    <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      {part}
-                                    </a>
-                                  )
-                                }
-                                return <span key={index}>{part}</span>
-                              })}
+                          </div>
+                        )
+                      }
+
+                      // Other sources (website etc.) — simple display
+                      return (
+                        <div key={msg.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>🌐</div>
+                          <div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                              {msg.created_at ? new Date(msg.created_at).toLocaleString('he-IL') : ''}
                             </div>
-                          )}
+                            <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
