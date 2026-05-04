@@ -564,33 +564,83 @@ export default function ContactDetailsPage() {
                 </div>
               )}
 
-              <div style={{ padding: 20 }}>
+              <div style={{ padding: '12px 16px' }}>
                 {inquiries.length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>אין פניות רשומות.</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {inquiries.map((inq: any) => {
-                      const srcIcons: Record<string, string> = { website: '🌐', whatsapp: '💬', phone: '📞', meeting: '🤝', email: '📧', note: '📝' }
-                      const srcColors: Record<string, string> = { website: '#3b82f6', whatsapp: '#25D366', phone: '#f59e0b', meeting: '#8b5cf6', email: '#6366f1', note: '#94a3b8' }
+                      const rawPayload = inq.raw_payload
+                      const webhookType: string = rawPayload?.typeWebhook || ''
+                      const senderPhone: string = rawPayload?.senderData?.sender || ''
+                      const isOutgoing = inq.source === 'whatsapp' && (
+                        webhookType.startsWith('outgoing') ||
+                        senderPhone.startsWith('972528350600')
+                      )
+                      const isNote = inq.source === 'note'
+                      const isWhatsApp = inq.source === 'whatsapp'
+
+                      const msgContent = (text: string) =>
+                        text?.split(/(https?:\/\/[^\s]+)/g).map((part: string, idx: number) =>
+                          part.match(/https?:\/\/[^\s]+/) ? (
+                            <a key={idx} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>{part}</a>
+                          ) : <span key={idx}>{part}</span>
+                        )
+
+                      if (isNote) {
+                        return (
+                          <div key={inq.id} style={{ background: '#fef9c3', border: '1px solid #fde047', padding: '8px 12px', borderRadius: 8, display: 'flex', gap: 8 }}>
+                            <span style={{ fontSize: 14 }}>📝</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#854d0e', marginBottom: 4 }}>תיעוד פנימי</div>
+                              <div style={{ fontSize: 13, color: '#713f12', whiteSpace: 'pre-wrap' }}>{msgContent(inq.message || '')}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                                {inq.created_at ? new Date(inq.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      if (isWhatsApp) {
+                        return (
+                          <div key={inq.id} style={{
+                            display: 'flex',
+                            justifyContent: isOutgoing ? 'flex-start' : 'flex-end',
+                            paddingRight: isOutgoing ? 40 : 0,
+                            paddingLeft: isOutgoing ? 0 : 40,
+                          }}>
+                            <div style={{
+                              maxWidth: '75%',
+                              background: isOutgoing ? '#dbeafe' : '#dcfce7',
+                              borderRadius: isOutgoing ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+                              padding: '8px 12px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: isOutgoing ? '#1d4ed8' : '#166534', marginBottom: 4 }}>
+                                {isOutgoing ? '← שלחנו' : `${contact?.name || 'לקוח'} ←`}
+                              </div>
+                              <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                                {msgContent(inq.message || '')}
+                              </div>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textAlign: isOutgoing ? 'left' : 'right' }}>
+                                {inq.created_at ? new Date(inq.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      // Other sources (website, phone, email, meeting)
+                      const srcIcons: Record<string, string> = { website: '🌐', phone: '📞', meeting: '🤝', email: '📧' }
                       return (
-                        <div key={inq.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px dashed var(--border-light)' }}>
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: (srcColors[inq.source] || '#94a3b8') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                        <div key={inq.id} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: '1px dashed var(--border-light)' }}>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
                             {srcIcons[inq.source] || '📋'}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
-                              {inq.message?.split(/(https?:\/\/[^\s]+)/g).map((part: string, index: number) => {
-                                if (part.match(/https?:\/\/[^\s]+/)) {
-                                  return (
-                                    <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>
-                                      {part}
-                                    </a>
-                                  )
-                                }
-                                return <span key={index}>{part}</span>
-                              })}
-                            </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{new Date(inq.created_at).toLocaleString('he-IL')}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{msgContent(inq.message || '')}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{inq.created_at ? new Date(inq.created_at).toLocaleString('he-IL') : ''}</div>
                           </div>
                         </div>
                       )

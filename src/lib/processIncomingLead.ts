@@ -163,6 +163,7 @@ export async function processIncomingLead(
           source,
           message,
           lead_id: null,
+          raw_payload: rawPayload ?? null,
         })
 
         console.log(`[processIncomingLead] Active contact ${matchedContactId} — added inquiry silently`)

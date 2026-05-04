@@ -193,6 +193,7 @@ export default function LeadsPage() {
       message: m.content,
       lead_id: leadId,
       created_at: m.created_at,
+      raw_payload: m.raw_payload ?? null,
     }))
     const { error: insertErr } = await (supabase.from('contact_inquiries') as any).insert(inquiries)
     if (insertErr) {
