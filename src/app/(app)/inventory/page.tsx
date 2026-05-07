@@ -13,11 +13,15 @@ interface ItemWithLevels extends Item {
   total_quantity: number
 }
 
+const PAGE_SIZE = 50
+
 export default function InventoryPage() {
   const supabase = createClient()
   const [items, setItems] = useState<ItemWithLevels[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
 
   // Advanced Filters
@@ -47,47 +51,65 @@ export default function InventoryPage() {
     fetchOptions()
   }, [])
 
-  const fetchItems = async () => {
-    setLoading(true)
-    let dbQuery = supabase
+  const buildQuery = (fromIndex: number) => {
+    // When searching, fetch ALL matching results (no range limit)
+    const isFiltered = !!(search || categoryFilter || tagFilter || minPrice || maxPrice)
+
+    let q = supabase
       .from('items')
       .select('*, inventory_levels(*)', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .limit(100)
+
+    if (!isFiltered) {
+      // Pagination only when not searching
+      q = q.range(fromIndex, fromIndex + PAGE_SIZE - 1) as any
+    }
 
     if (search) {
-      dbQuery = dbQuery.or(`name.ilike.%${search}%,category.ilike.%${search}%`)
+      q = q.or(`name.ilike.%${search}%,category.ilike.%${search}%`) as any
     }
-    if (categoryFilter) {
-      dbQuery = dbQuery.eq('category', categoryFilter)
-    }
-    if (tagFilter) {
-      dbQuery = dbQuery.contains('tags', [tagFilter])
-    }
-    if (minPrice) {
-      dbQuery = dbQuery.gte('cost', parseFloat(minPrice))
-    }
-    if (maxPrice) {
-      dbQuery = dbQuery.lte('cost', parseFloat(maxPrice))
-    }
+    if (categoryFilter) q = q.eq('category', categoryFilter) as any
+    if (tagFilter) q = q.contains('tags', [tagFilter]) as any
+    if (minPrice) q = q.gte('cost', parseFloat(minPrice)) as any
+    if (maxPrice) q = q.lte('cost', parseFloat(maxPrice)) as any
 
-    const { data, error, count } = await dbQuery
+    return q
+  }
+
+  const fetchItems = async () => {
+    setLoading(true)
+    setPage(0)
+    const { data, error, count } = await buildQuery(0)
 
     if (count !== null) setTotalCount(count)
 
     if (!error && data) {
-      let mapped = data.map((item: any) => ({
+      let mapped = (data as any[]).map((item: any) => ({
         ...item,
         total_quantity: item.inventory_levels.reduce((acc: number, level: any) => acc + (level.quantity || 0), 0)
       }))
-
-      // Local filtering for computed quantity
       if (minQty) mapped = mapped.filter(item => item.total_quantity >= parseInt(minQty))
       if (maxQty) mapped = mapped.filter(item => item.total_quantity <= parseInt(maxQty))
-
       setItems(mapped)
     }
     setLoading(false)
+  }
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    const nextPage = page + 1
+    const { data, error } = await buildQuery(nextPage * PAGE_SIZE)
+    if (!error && data) {
+      let mapped = (data as any[]).map((item: any) => ({
+        ...item,
+        total_quantity: item.inventory_levels.reduce((acc: number, level: any) => acc + (level.quantity || 0), 0)
+      }))
+      if (minQty) mapped = mapped.filter(item => item.total_quantity >= parseInt(minQty))
+      if (maxQty) mapped = mapped.filter(item => item.total_quantity <= parseInt(maxQty))
+      setItems(prev => [...prev, ...mapped])
+      setPage(nextPage)
+    }
+    setLoadingMore(false)
   }
 
   useEffect(() => {
@@ -275,9 +297,9 @@ export default function InventoryPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div className="text-muted" style={{ fontSize: 13 }}>
-                  {(search || showFilters)
-                    ? `${filtered.length} תוצאות מתוך ${totalCount} פריטים`
-                    : `סה"כ ${totalCount} פריטים`
+                  {search || categoryFilter || tagFilter || minPrice || maxPrice
+                    ? `נמצאו ${items.length} תוצאות מתוך ${totalCount} פריטים`
+                    : `מציג ${items.length} מתוך ${totalCount} פריטים`
                   }
                 </div>
                 <button
@@ -294,13 +316,30 @@ export default function InventoryPage() {
             {showFilters && (
               <div style={{ marginTop: 16, padding: 16, background: 'var(--surface-2)', borderRadius: 12, border: '1px solid var(--border)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-                  {/* Category Filter */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4, fontWeight: 500 }}>קטגוריה</label>
-                    <select className="form-input" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ padding: '8px' }}>
-                      <option value="">כל הקטגוריות</option>
-                      {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                  {/* Category Filter — pill buttons (mobile-friendly) */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 8, fontWeight: 500 }}>קטגוריה</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <button
+                        onClick={() => setCategoryFilter('')}
+                        style={{
+                          padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)',
+                          background: categoryFilter === '' ? 'var(--pink)' : 'var(--surface)',
+                          color: categoryFilter === '' ? 'white' : 'var(--text-secondary)'
+                        }}
+                      >הכל</button>
+                      {allCategories.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setCategoryFilter(c === categoryFilter ? '' : c)}
+                          style={{
+                            padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)',
+                            background: categoryFilter === c ? 'var(--pink)' : 'var(--surface)',
+                            color: categoryFilter === c ? 'white' : 'var(--text-secondary)'
+                          }}
+                        >{c}</button>
+                      ))}
+                    </div>
                   </div>
                   {/* Tags Filter */}
                   <div>
@@ -413,6 +452,26 @@ export default function InventoryPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Load More — mobile card list */}
+              {!search && !categoryFilter && !tagFilter && !minPrice && !maxPrice && items.length < totalCount && (
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    style={{
+                      padding: '12px 32px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-primary)',
+                      display: 'inline-flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center'
+                    }}
+                  >
+                    {loadingMore
+                      ? <><span className="spinner" style={{ width: 14, height: 14 }} /> טוען...</>
+                      : `טען עוד (${totalCount - items.length} נותרו)`
+                    }
+                  </button>
+                </div>
+              )}
 
               {/* ── Desktop table ── */}
               <div className="desktop-table overflow-x-auto">
@@ -661,6 +720,26 @@ export default function InventoryPage() {
                 </tbody>
               </table>
               </div>
+
+              {/* Load More button — hidden when searching (all results already shown) */}
+              {!search && !categoryFilter && !tagFilter && !minPrice && !maxPrice && items.length < totalCount && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    style={{
+                      padding: '10px 32px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-primary)',
+                      display: 'inline-flex', alignItems: 'center', gap: 8
+                    }}
+                  >
+                    {loadingMore
+                      ? <><span className="spinner" style={{ width: 14, height: 14 }} /> טוען...</>
+                      : `טען עוד (${totalCount - items.length} נותרו)`
+                    }
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
