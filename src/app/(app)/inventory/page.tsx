@@ -453,25 +453,6 @@ export default function InventoryPage() {
                 ))}
               </div>
 
-              {/* Load More — mobile card list */}
-              {!search && !categoryFilter && !tagFilter && !minPrice && !maxPrice && items.length < totalCount && (
-                <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                  <button
-                    onClick={loadMore}
-                    disabled={loadingMore}
-                    style={{
-                      padding: '12px 32px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                      background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-primary)',
-                      display: 'inline-flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center'
-                    }}
-                  >
-                    {loadingMore
-                      ? <><span className="spinner" style={{ width: 14, height: 14 }} /> טוען...</>
-                      : `טען עוד (${totalCount - items.length} נותרו)`
-                    }
-                  </button>
-                </div>
-              )}
 
               {/* ── Desktop table ── */}
               <div className="desktop-table overflow-x-auto">
