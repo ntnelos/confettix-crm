@@ -354,9 +354,18 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   }
 
   const ensureOrderExists = async (quoteId: string) => {
+    // 1. Always check DB directly to avoid stale React state
+    const { data: existingOrders } = await (supabase.from('orders') as any)
+      .select('*')
+      .eq('quote_id', quoteId)
+      .limit(1)
+
+    if (existingOrders && existingOrders.length > 0) {
+      return existingOrders[0];
+    }
+
     const sourceQuote = quotes.find(q => q.id === quoteId)
     if (!sourceQuote) return null;
-    if (sourceQuote.orders && sourceQuote.orders.length > 0) return sourceQuote.orders[0];
 
     const { data: { user } } = await supabase.auth.getUser()
     const { data: newOrder, error } = await (supabase.from('orders') as any).insert({
@@ -478,9 +487,10 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   }
 
   const approveQuoteToOrder = async (quoteId: string) => {
-    if (!window.confirm('האם לאשר הצעת מחיר זו? ההזדמנות תעבור לסטטוס "בטיפול" וסכום העסקה יעודכן.')) return;
+    if (!window.confirm('האם להפיק הזמנה מהצעה זו? (ההצעה המקורית תישאר כטיוטה בטאב נפרד)')) return;
     setIsDuplicating(true)
     const sourceQuote = quotes.find(q => q.id === quoteId)
+    const sourceItems = itemsMap[quoteId] || []
     if (!sourceQuote) { setIsDuplicating(false); return }
 
     // 1. Update opportunity status & value
@@ -489,20 +499,51 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
       calculated_value: sourceQuote.total_with_vat || 0
     }).eq('id', opportunityId);
 
-    // 2. Update the ORIGINAL quote status to approved (no duplication)
-    await (supabase.from('quotes') as any).update({
-      status: 'approved'
-    }).eq('id', quoteId);
+    // 2. Duplicate Quote as 'approved'
+    const { data: newQuote } = await (supabase.from('quotes') as any).insert({
+      opportunity_id: opportunityId,
+      name: `${sourceQuote.name} (הזמנה)`,
+      status: 'approved',
+      subtotal: sourceQuote.subtotal,
+      vat_rate: sourceQuote.vat_rate,
+      shipping_cost: sourceQuote.shipping_cost,
+      total_with_vat: sourceQuote.total_with_vat,
+      version: 1
+    }).select().single()
 
-    // 3. Create order record in orders table (linked to the original quote)
-    const order = await ensureOrderExists(quoteId)
+    if (newQuote) {
+      for (const item of sourceItems) {
+        await (supabase.from('quote_items') as any).insert({
+          quote_id: newQuote.id,
+          product_name: item.product_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent,
+          line_total: item.line_total,
+          woo_product_id: item.woo_product_id,
+          woo_product_url: item.woo_product_url,
+          image_url: item.image_url,
+          sort_order: item.sort_order
+        })
+      }
 
-    if (order) {
+      // 3. Create order record linked to the NEW quote
+      const { data: { user } } = await supabase.auth.getUser()
+      await (supabase.from('orders') as any).insert({
+        quote_id: newQuote.id,
+        opportunity_id: opportunityId,
+        total_amount: newQuote.total_with_vat || 0,
+        status: 'pending_signature',
+        ...(user?.id && { created_by: user.id })
+      })
+
       await fetchQuotes()
-      setActiveQuoteId(quoteId)
+      setActiveQuoteId(newQuote.id)
       if (onOrderUpdated) onOrderUpdated()
       router.refresh()
     }
+
     setIsDuplicating(false)
   }
 
@@ -817,21 +858,41 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
                                 )}
                               </div>
                               <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>שליחת הזמנה ללקוח:</div>
-                                <button
-                                  onClick={() => {
-                                    if (activeQuote?.orders?.some((or: any) => or.status === 'signed')) {
-                                      window.open(`/orders/${activeQuoteId}/checkout?mode=readOnly`, '_blank')
-                                    } else {
-                                      generateOrderAndRedirect(activeQuoteId)
-                                    }
-                                  }}
-                                  disabled={isDuplicating}
-                                  style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, opacity: isDuplicating ? 0.7 : 1 }}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-                                  {isDuplicating ? 'מייצר...' : activeQuote?.orders?.some((or: any) => or.status === 'signed') ? 'צפייה בחוזה חתום' : 'הפק חוזה לחתימה'}
-                                </button>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>קישור לחוזה מול הלקוח:</div>
+                                {activeQuote?.orders?.some((or: any) => or.status === 'signed') ? (
+                                  <button
+                                    onClick={() => window.open(`/orders/${activeQuoteId}/checkout?mode=readOnly`, '_blank')}
+                                    style={{ padding: '8px 16px', fontSize: 12, background: '#4caf50', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                                    צפייה בחוזה חתום
+                                  </button>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <button
+                                      onClick={() => generateOrderAndRedirect(activeQuoteId)}
+                                      disabled={isDuplicating}
+                                      style={{ padding: '8px 16px', fontSize: 12, background: '#3b82f6', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, opacity: isDuplicating ? 0.7 : 1 }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                      {isDuplicating ? 'פותח...' : 'פתח עמוד חתימה'}
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        const order = await ensureOrderExists(activeQuoteId);
+                                        if (order) {
+                                          const link = `${window.location.origin}/orders/${activeQuoteId}/checkout`;
+                                          navigator.clipboard.writeText(link);
+                                          alert('הקישור הועתק: ' + link);
+                                        }
+                                      }}
+                                      style={{ padding: '8px 16px', fontSize: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                                      title="העתק קישור לשליחה ללקוח"
+                                    >
+                                      🔗 העתק קישור
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>הפקת חשבונית מולטי:</div>

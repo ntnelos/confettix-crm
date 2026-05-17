@@ -19,11 +19,13 @@ export async function GET(
   const supabase = getServiceClient()
 
   // 1. Fetch the Order record bridging to the Quote
-  const { data: order, error: orderErr } = await supabase
+  const { data: orders, error: orderErr } = await supabase
     .from('orders')
     .select('*')
     .eq('quote_id', quoteId)
-    .single()
+    .limit(1)
+
+  const order = orders?.[0];
 
   if (!order) {
     console.error('Order fetch error:', orderErr)
