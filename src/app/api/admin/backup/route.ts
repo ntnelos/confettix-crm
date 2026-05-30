@@ -81,11 +81,12 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(jsonString, 'utf-8');
     const fileName = `confettix-backup-${dateLabel}-${timestamp}.json`;
 
-    // Upload to Google Drive
+    // Upload to Google Drive (Shared Drive supported)
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_JSON || '{}');
     const auth = new google.auth.GoogleAuth({
       credentials,
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
+      // Full drive scope required for Shared Drive write access
+      scopes: ['https://www.googleapis.com/auth/drive'],
     });
     const drive = google.drive({ version: 'v3', auth });
 
@@ -95,6 +96,8 @@ export async function POST(req: Request) {
     readable.push(null);
 
     const driveResponse = await drive.files.create({
+      // Required for Shared Drive support
+      supportsAllDrives: true,
       requestBody: {
         name: fileName,
         parents: [process.env.GOOGLE_DRIVE_BACKUP_FOLDER_ID!],
