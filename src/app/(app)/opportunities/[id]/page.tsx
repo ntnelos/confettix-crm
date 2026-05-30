@@ -502,6 +502,7 @@ export default function OpportunityDetailsPage() {
                      label="תאריך אספקה (משוער)"
                      value={opp.expected_delivery?.toString() || ''}
                      type="date"
+                     dir="ltr"
                      onSave={val => updateField('expected_delivery', val)}
                   />
 
@@ -526,6 +527,7 @@ export default function OpportunityDetailsPage() {
                     label="תאריך תשלום"
                     value={opp.payment_date?.toString() || ''}
                     type="date"
+                    dir="ltr"
                     onSave={val => updateField('payment_date', val)}
                   />
 
