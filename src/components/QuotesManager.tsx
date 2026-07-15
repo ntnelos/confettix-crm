@@ -45,6 +45,7 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   const [selectedImportQuote, setSelectedImportQuote] = useState<any>(null)
   const [selectedImportItems, setSelectedImportItems] = useState<any[]>([])
   const [isImporting, setIsImporting] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
 
   useEffect(() => {
     fetchQuotes()
@@ -578,10 +579,10 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   }
 
   const loadQuoteFromUrl = async (url: string) => {
-    // Extract quote ID from URL patterns like /quotes/{id}/preview or /quotes/{id}
-    const match = url.match(/quotes\/([a-f0-9-]{36})/i)
+    // Extract quote ID from URL patterns like /quotes/{id}/preview, /quotes/{id}, or /orders/{id}/checkout
+    const match = url.match(/(?:quotes|orders)\/([a-f0-9-]{36})/i)
     if (!match) {
-      alert('לא הצלחתי לזהות מזהה הצעה מהקישור. ודא שהקישור תקין.')
+      alert('לא הצלחתי לזהות מזהה מסמך מהקישור. ודא שהקישור תקין (ממסך הזמנה או תצוגה מקדימה).')
       return
     }
     const quoteId = match[1]
@@ -803,24 +804,58 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
                         )}
                       </div>
 
-                      {/* Add empty generic row */}
-                      <button onClick={() => addItemToQuote(activeQuoteId)} className="btn btn-secondary" style={{ padding: '14px 24px', fontSize: 15, background: 'white' }}>
-                        + הוספת שורה ידנית
-                      </button>
-                      {/* Import from existing quote */}
-                      <button
-                        onClick={() => setShowImportModal(true)}
-                        className="btn btn-secondary"
-                        style={{ padding: '14px 24px', fontSize: 15, background: 'white', border: '2px dashed var(--pink)', color: 'var(--pink)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                          <polyline points="14 2 14 8 20 8"/>
-                          <line x1="12" y1="18" x2="12" y2="12"/>
-                          <line x1="9" y1="15" x2="15" y2="15"/>
-                        </svg>
-                        הוסף מוצרים מהצעה קיימת
-                      </button>
+                      {/* Add Options Dropdown */}
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={() => setShowAddMenu(!showAddMenu)}
+                          className="btn btn-secondary"
+                          style={{ padding: '12px 20px', fontSize: 14, background: 'white', display: 'flex', alignItems: 'center', gap: 8 }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                          הוספת פריטים
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAddMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        </button>
+
+                        {showAddMenu && (
+                          <>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowAddMenu(false)}></div>
+                            <div
+                              style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: 'white', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 20, minWidth: 240, overflow: 'hidden' }}
+                            >
+                              <button
+                                onClick={() => { addItemToQuote(activeQuoteId); setShowAddMenu(false); }}
+                                style={{ width: '100%', textAlign: 'right', padding: '12px 16px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, transition: 'background 0.2s' }}
+                                onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                                onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, background: 'var(--surface)', borderRadius: 6, color: 'var(--text-muted)' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </span>
+                                הוספת שורה ידנית
+                              </button>
+                              <button
+                                onClick={() => { setShowImportModal(true); setShowAddMenu(false); }}
+                                style={{ width: '100%', textAlign: 'right', padding: '12px 16px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--pink)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 10, transition: 'background 0.2s' }}
+                                onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                                onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, background: 'rgba(233, 30, 99, 0.1)', borderRadius: 6, color: 'var(--pink)' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                  </svg>
+                                </span>
+                                הוסף מהצעה קיימת
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
