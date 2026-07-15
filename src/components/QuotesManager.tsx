@@ -36,6 +36,16 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
   // Local shipping input state to prevent reset on re-render
   const [shippingInput, setShippingInput] = useState<Record<string, string>>({})
 
+  // Import from existing quote modal state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importSearchQuery, setImportSearchQuery] = useState('')
+  const [importUrlInput, setImportUrlInput] = useState('')
+  const [importSearchResults, setImportSearchResults] = useState<any[]>([])
+  const [isImportSearching, setIsImportSearching] = useState(false)
+  const [selectedImportQuote, setSelectedImportQuote] = useState<any>(null)
+  const [selectedImportItems, setSelectedImportItems] = useState<any[]>([])
+  const [isImporting, setIsImporting] = useState(false)
+
   useEffect(() => {
     fetchQuotes()
   }, [opportunityId])
@@ -547,6 +557,105 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
     setIsDuplicating(false)
   }
 
+  // ---- Import from existing quote functions ----
+  const searchExistingQuotes = async (query: string) => {
+    if (query.length < 2) {
+      setImportSearchResults([])
+      return
+    }
+    setIsImportSearching(true)
+    try {
+      const { data } = await (supabase.from('quotes') as any)
+        .select('id, name, status, created_at, subtotal, total_with_vat, opportunity_id, opportunities(subject, contacts(name), organizations(name))')
+        .ilike('name', `%${query}%`)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (data) setImportSearchResults(data)
+    } catch (e) {
+      console.error('Error searching quotes:', e)
+    }
+    setIsImportSearching(false)
+  }
+
+  const loadQuoteFromUrl = async (url: string) => {
+    // Extract quote ID from URL patterns like /quotes/{id}/preview or /quotes/{id}
+    const match = url.match(/quotes\/([a-f0-9-]{36})/i)
+    if (!match) {
+      alert('לא הצלחתי לזהות מזהה הצעה מהקישור. ודא שהקישור תקין.')
+      return
+    }
+    const quoteId = match[1]
+    setIsImportSearching(true)
+    try {
+      const { data: quoteData } = await (supabase.from('quotes') as any)
+        .select('id, name, status, created_at, subtotal, total_with_vat, opportunity_id, opportunities(subject, contacts(name), organizations(name))')
+        .eq('id', quoteId)
+        .single()
+      if (quoteData) {
+        await selectQuoteForImport(quoteData)
+      } else {
+        alert('לא נמצאה הצעה עם המזהה הזה.')
+      }
+    } catch (e) {
+      console.error('Error loading quote from URL:', e)
+      alert('שגיאה בטעינת ההצעה מהקישור.')
+    }
+    setIsImportSearching(false)
+  }
+
+  const selectQuoteForImport = async (quote: any) => {
+    setSelectedImportQuote(quote)
+    // Fetch items for the selected quote
+    const { data: items } = await (supabase.from('quote_items') as any)
+      .select('*')
+      .eq('quote_id', quote.id)
+      .order('sort_order', { ascending: true })
+    setSelectedImportItems(items || [])
+  }
+
+  const importItemsFromQuote = async () => {
+    if (!activeQuoteId || !selectedImportQuote || selectedImportItems.length === 0) return
+    setIsImporting(true)
+    const quote = quotes.find(q => q.id === activeQuoteId)
+    if (!quote) { setIsImporting(false); return }
+
+    const existingItems = itemsMap[activeQuoteId] || []
+    let currentSortOrder = existingItems.length
+
+    const newItems = [...existingItems]
+    for (const item of selectedImportItems) {
+      const { data } = await (supabase.from('quote_items') as any)
+        .insert({
+          quote_id: activeQuoteId,
+          product_name: item.product_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent,
+          line_total: item.line_total,
+          woo_product_id: item.woo_product_id,
+          woo_product_url: item.woo_product_url,
+          image_url: item.image_url,
+          sort_order: currentSortOrder++
+        })
+        .select()
+        .single()
+      if (data) newItems.push(data)
+    }
+
+    setItemsMap({ ...itemsMap, [activeQuoteId]: newItems })
+    recalculateQuote(quote, newItems)
+
+    // Reset modal
+    setShowImportModal(false)
+    setImportSearchQuery('')
+    setImportUrlInput('')
+    setImportSearchResults([])
+    setSelectedImportQuote(null)
+    setSelectedImportItems([])
+    setIsImporting(false)
+  }
+
   if (loading) return <div style={{ padding: 20 }}>טוען הצעות מחיר...</div>
 
   return (
@@ -697,6 +806,20 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
                       {/* Add empty generic row */}
                       <button onClick={() => addItemToQuote(activeQuoteId)} className="btn btn-secondary" style={{ padding: '14px 24px', fontSize: 15, background: 'white' }}>
                         + הוספת שורה ידנית
+                      </button>
+                      {/* Import from existing quote */}
+                      <button
+                        onClick={() => setShowImportModal(true)}
+                        className="btn btn-secondary"
+                        style={{ padding: '14px 24px', fontSize: 15, background: 'white', border: '2px dashed var(--pink)', color: 'var(--pink)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="12" y1="18" x2="12" y2="12"/>
+                          <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                        הוסף מוצרים מהצעה קיימת
                       </button>
                     </div>
                   )}
@@ -1159,6 +1282,172 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
           </div>
         )
       })()}
+      {/* Import from Existing Quote Modal */}
+      {showImportModal && activeQuoteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: 0, width: '100%', maxWidth: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            {/* Header */}
+            <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #0b1536, #1a1b41)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: 'white', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="12" y1="18" x2="12" y2="12"/>
+                  <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                הוסף מוצרים מהצעה קיימת
+              </h3>
+              <button onClick={() => { setShowImportModal(false); setSelectedImportQuote(null); setSelectedImportItems([]); setImportSearchQuery(''); setImportUrlInput(''); setImportSearchResults([]); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', color: 'white', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+
+            <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+              {!selectedImportQuote ? (
+                /* Search Phase */
+                <>
+                  {/* URL Input */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--text)' }}>🔗 הדבק קישור להצעה קיימת:</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="url"
+                        placeholder="https://...  /quotes/xxxx/preview"
+                        value={importUrlInput}
+                        onChange={e => setImportUrlInput(e.target.value)}
+                        style={{ flex: 1, padding: '12px 14px', borderRadius: 8, border: '2px solid var(--border)', fontSize: 14 }}
+                      />
+                      <button
+                        onClick={() => loadQuoteFromUrl(importUrlInput)}
+                        disabled={!importUrlInput.trim() || isImportSearching}
+                        style={{ padding: '12px 20px', background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 8, fontWeight: 600, cursor: (!importUrlInput.trim() || isImportSearching) ? 'not-allowed' : 'pointer', opacity: (!importUrlInput.trim() || isImportSearching) ? 0.5 : 1, whiteSpace: 'nowrap', fontSize: 14 }}
+                      >
+                        {isImportSearching ? 'טוען...' : 'טען הצעה'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>או</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
+
+                  {/* Search by name */}
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--text)' }}>🔎 חפש לפי שם הצעה:</div>
+                    <input
+                      type="text"
+                      placeholder="הקלד שם הצעה לחיפוש..."
+                      value={importSearchQuery}
+                      onChange={e => {
+                        setImportSearchQuery(e.target.value)
+                        searchExistingQuotes(e.target.value)
+                      }}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '2px solid var(--border)', fontSize: 14, marginBottom: 12 }}
+                    />
+                    {isImportSearching && <div style={{ textAlign: 'center', padding: 10, color: 'var(--text-muted)', fontSize: 13 }}>מחפש...</div>}
+
+                    {importSearchResults.length > 0 && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 10, maxHeight: 300, overflowY: 'auto' }}>
+                        {importSearchResults.map(q => {
+                          const statusLabels: Record<string, string> = { draft: 'טיוטה', final: 'סופי', approved: 'מאושר', rejected: 'נדחה' }
+                          const statusColors: Record<string, string> = { draft: '#f59e0b', final: '#3b82f6', approved: '#22c55e', rejected: '#ef4444' }
+                          return (
+                            <div
+                              key={q.id}
+                              onClick={() => selectQuoteForImport(q)}
+                              style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background 0.15s', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
+                              onMouseOver={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                              onMouseOut={e => e.currentTarget.style.background = 'white'}
+                            >
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <span>{q.opportunities?.subject || ''}</span>
+                                  {q.opportunities?.contacts?.name && <span>• {q.opportunities.contacts.name}</span>}
+                                  {q.opportunities?.organizations?.name && <span>• {q.opportunities.organizations.name}</span>}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: statusColors[q.status] || '#888', background: `${statusColors[q.status] || '#888'}18`, padding: '2px 8px', borderRadius: 10 }}>
+                                  {statusLabels[q.status] || q.status}
+                                </span>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(q.created_at).toLocaleDateString('he-IL')}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--pink)' }}>₪{q.total_with_vat?.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {importSearchQuery.length >= 2 && !isImportSearching && importSearchResults.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>לא נמצאו הצעות תואמות</div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Preview Phase - Show selected quote items */
+                <>
+                  <button
+                    onClick={() => { setSelectedImportQuote(null); setSelectedImportItems([]); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--pink)', fontWeight: 600, fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}
+                  >
+                    ← חזרה לחיפוש
+                  </button>
+
+                  <div style={{ background: 'var(--surface-2)', padding: 16, borderRadius: 10, marginBottom: 16, border: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{selectedImportQuote.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <span>📅 {new Date(selectedImportQuote.created_at).toLocaleDateString('he-IL')}</span>
+                      {selectedImportQuote.opportunities?.subject && <span>📋 {selectedImportQuote.opportunities.subject}</span>}
+                      {selectedImportQuote.opportunities?.contacts?.name && <span>👤 {selectedImportQuote.opportunities.contacts.name}</span>}
+                      <span style={{ fontWeight: 700, color: 'var(--pink)' }}>₪{selectedImportQuote.total_with_vat?.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>מוצרים שיועתקו ({selectedImportItems.length}):</div>
+
+                  {selectedImportItems.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>אין מוצרים בהצעה זו</div>
+                  ) : (
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 10, maxHeight: 260, overflowY: 'auto' }}>
+                      {selectedImportItems.map((item, idx) => (
+                        <div key={item.id} style={{ padding: '10px 14px', borderBottom: idx < selectedImportItems.length - 1 ? '1px solid var(--border-light)' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {item.image_url ? (
+                            <img src={item.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                          ) : (
+                            <div style={{ width: 36, height: 36, background: 'var(--surface-2)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', color: 'var(--text-muted)', fontSize: 16, flexShrink: 0 }}>📦</div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.product_name}</div>
+                            {item.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
+                          </div>
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0, fontSize: 12 }}>
+                            <span style={{ color: 'var(--text-muted)' }}>×{item.quantity}</span>
+                            <span>₪{item.unit_price?.toFixed(2)}</span>
+                            {item.discount_percent > 0 && <span style={{ color: '#ef4444' }}>-{item.discount_percent}%</span>}
+                            <span style={{ fontWeight: 700, color: 'var(--pink)' }}>₪{item.line_total?.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedImportItems.length > 0 && (
+                    <button
+                      onClick={importItemsFromQuote}
+                      disabled={isImporting}
+                      style={{ marginTop: 16, width: '100%', padding: '14px', background: 'linear-gradient(135deg, var(--pink), #e91e63)', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: isImporting ? 'not-allowed' : 'pointer', opacity: isImporting ? 0.7 : 1, transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(233,30,99,0.25)' }}
+                    >
+                      {isImporting ? 'מעתיק מוצרים...' : `✓ העתק ${selectedImportItems.length} מוצרים להצעה הנוכחית`}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
