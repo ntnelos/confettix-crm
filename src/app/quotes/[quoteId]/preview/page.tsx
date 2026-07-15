@@ -310,12 +310,17 @@ export default function QuotePreviewPage() {
                 <tr key={item.id}>
                   <td style={{ fontWeight: 600 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {item.image_url
-                        ? <img src={item.image_url} alt="" width={30} height={30}
-                            style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
-                        : <GiftIcon />
-                      }
-                      {item.product_name}
+                      {item.image_url ? (
+                        <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה באתר" style={{ flexShrink: 0 }}>
+                          <img src={item.image_url} alt="" width={30} height={30} style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} />
+                        </a>
+                      ) : (
+                        <GiftIcon />
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {item.product_name}
+                        {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                      </div>
                     </div>
                   </td>
                   <td style={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap' }}>{item.description || ''}</td>

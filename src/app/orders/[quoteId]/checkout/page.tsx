@@ -405,8 +405,22 @@ ${window.location.href}
                       {items.map((item: any) => (
                         <tr key={item.id}>
                           <td>
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>{item.product_name}</div>
-                            {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', marginTop: 4 }}>{item.description}</div>}
+                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                              {item.image_url ? (
+                                <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה באתר" style={{ flexShrink: 0 }}>
+                                  <img src={item.image_url} alt={item.product_name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                                </a>
+                              ) : (
+                                <div style={{ width: 48, height: 48, background: '#f8fafc', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #cbd5e1', flexShrink: 0, fontSize: 20 }}>📦</div>
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {item.product_name}
+                                  {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                                </div>
+                                {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', marginTop: 4 }}>{item.description}</div>}
+                              </div>
+                            </div>
                           </td>
                           <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.quantity} יח׳</td>
                           <td style={{ textAlign: 'center' }}>
@@ -430,8 +444,18 @@ ${window.location.href}
                   </div>
                   {items.map((item: any) => (
                     <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 14, borderBottom: '1px solid #f1f5f9', paddingBottom: 14, gap: 12 }}>
+                      {item.image_url ? (
+                        <a href={item.woo_product_url || '#'} target="_blank" rel="noreferrer" title="צפה באתר" style={{ flexShrink: 0 }}>
+                          <img src={item.image_url} alt={item.product_name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                        </a>
+                      ) : (
+                        <div style={{ width: 48, height: 48, background: '#f8fafc', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #cbd5e1', flexShrink: 0, fontSize: 20 }}>📦</div>
+                      )}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{item.product_name}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          {item.product_name}
+                          {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                        </div>
                         {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 4 }}>{item.description}</div>}
                         <div style={{ color: '#000', fontSize: 13, fontWeight: 700 }}>
                           {item.quantity} יח׳ 
