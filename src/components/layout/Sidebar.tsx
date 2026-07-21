@@ -91,17 +91,28 @@ export default function Sidebar() {
             <button className="hamburger-btn" onClick={() => setIsMobileOpen(false)} style={{ display: 'var(--mobile-close-display, none)' }}>
               <XIcon />
             </button>
+            <img
+              src="https://cdn.confettix.co.il/wp-content/uploads/logo-confettix-1.webp?strip=all&lossy=1&ssl=1"
+              alt="קונפטיקס"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling?.setAttribute('style', 'display:flex')
+              }}
+            />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: isMobileOpen ? '0' : '-20px' }}>
+          <span style={{ display: 'none', color: 'var(--pink)', fontWeight: 800, fontSize: 20 }}>
+            קונפטיקס
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
+            <span className="sidebar-logo-sub">Confettix CRM</span>
             <img
               src="/favicon.ico"
               alt="לוגו"
-              style={{ width: '28px', height: '28px', objectFit: 'contain' }}
+              style={{ width: '24px', height: '24px', objectFit: 'contain' }}
               onError={(e) => {
                 e.currentTarget.style.display = 'none'
               }}
             />
-            <span className="sidebar-logo-sub">Confettix CRM</span>
           </div>
         </div>
 
