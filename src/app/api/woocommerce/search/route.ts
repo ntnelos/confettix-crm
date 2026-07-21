@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const q = searchParams.get('q')
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  const q = request.nextUrl.searchParams.get('q')
 
   if (!q) {
     return NextResponse.json({ error: 'Search query is required' }, { status: 400 })
