@@ -130,11 +130,14 @@ export default function QuotesManager({ opportunityId, paymentDate, onOrderUpdat
     try {
       const res = await fetch(`/api/woocommerce/search?q=${encodeURIComponent(q)}`)
       const data = await res.json()
-      if (data.products) {
+      if (res.ok && data.products) {
         setSearchResults(data.products)
+      } else {
+        alert("שגיאה ממערכת WooCommerce:\n" + (data.error || data.detail || JSON.stringify(data)))
       }
     } catch (e) {
       console.error(e)
+      alert("שגיאת רשת בחיפוש מול WooCommerce: " + String(e))
     }
     setIsSearching(false)
   }
