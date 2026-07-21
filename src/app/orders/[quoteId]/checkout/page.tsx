@@ -416,7 +416,7 @@ ${window.location.href}
                               <div>
                                 <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
                                   {item.product_name}
-                                  {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                                  {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 למוצר באתר</a>}
                                 </div>
                                 {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', marginTop: 4 }}>{item.description}</div>}
                               </div>
@@ -454,7 +454,7 @@ ${window.location.href}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           {item.product_name}
-                          {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                          {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 למוצר באתר</a>}
                         </div>
                         {item.description && <div style={{ fontSize: 13, color: '#64748b', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 4 }}>{item.description}</div>}
                         <div style={{ color: '#000', fontSize: 13, fontWeight: 700 }}>

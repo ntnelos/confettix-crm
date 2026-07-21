@@ -319,7 +319,7 @@ export default function QuotePreviewPage() {
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {item.product_name}
-                        {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 לאתר</a>}
+                        {item.woo_product_url && <a href={item.woo_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#3b82f6', textDecoration: 'none', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }}>🔗 למוצר באתר</a>}
                       </div>
                     </div>
                   </td>

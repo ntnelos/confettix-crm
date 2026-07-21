@@ -12,7 +12,7 @@ interface GlobalSearchModalProps {
 export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const [query, setQuery] = useState('')
   const [module, setModule] = useState('all')
-  const [results, setResults] = useState({ contacts: [], organizations: [], opportunities: [] })
+  const [results, setResults] = useState({ contacts: [], organizations: [], opportunities: [], items: [] })
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -22,7 +22,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       setTimeout(() => inputRef.current?.focus(), 100)
     } else {
       setQuery('')
-      setResults({ contacts: [], organizations: [], opportunities: [] })
+      setResults({ contacts: [], organizations: [], opportunities: [], items: [] })
     }
   }, [isOpen])
 
@@ -39,7 +39,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
   useEffect(() => {
     if (!query || query.trim().length === 0) {
-      setResults({ contacts: [], organizations: [], opportunities: [] })
+      setResults({ contacts: [], organizations: [], opportunities: [], items: [] })
       setLoading(false)
       return
     }
@@ -67,11 +67,17 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         )
       }
 
+      if (module === 'all' || module === 'items') {
+        fetches.push(
+          supabase.from('items').select('id, name, category').ilike('name', searchStr).limit(5).then(({ data }) => ({ type: 'items', data: data || [] }))
+        )
+      }
+
       const res = await Promise.all(fetches)
 
       if (!isMounted) return
 
-      const newResults = { contacts: [], organizations: [], opportunities: [] }
+      const newResults = { contacts: [], organizations: [], opportunities: [], items: [] }
       res.forEach(r => {
         (newResults as any)[r.type] = r.data
       })
@@ -121,6 +127,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               <option value="contacts">אנשי קשר</option>
               <option value="organizations">ארגונים</option>
               <option value="opportunities">הזדמנויות</option>
+              <option value="items">מוצרים</option>
             </select>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14, position: 'absolute', left: 16, pointerEvents: 'none', color: 'var(--text-muted)' }}>
               <polyline points="6 9 12 15 18 9" />
@@ -152,7 +159,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
               <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--text-secondary)' }}>חיפוש מהיר</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>הקלד לחיפוש אנשי קשר, ארגונים והזדמנויות.</div>
+              <div style={{ fontSize: 13, marginTop: 4 }}>הקלד לחיפוש אנשי קשר, ארגונים, הזדמנויות ומוצרים.</div>
             </div>
           )}
 
@@ -212,6 +219,24 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     </svg>
                   </div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 14 }}>{opp.subject}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {results.items && results.items.length > 0 && (
+            <div>
+              <div style={{ padding: '8px 20px', background: 'var(--surface-2)', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', borderTop: (results.contacts.length > 0 || results.organizations.length > 0 || results.opportunities.length > 0) ? '1px solid var(--border)' : 'none', borderBottom: '1px solid var(--border-light)' }}>
+                מוצרים (מלאי)
+              </div>
+              {results.items.map((item: any) => (
+                <Link key={item.id} href={`/inventory`} onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', textDecoration: 'none', background: 'white', borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }} className="search-result-item">
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3e8ff', border: '1px solid #d8b4fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9333ea' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 14 }}>{item.name}</div>
                 </Link>
               ))}
             </div>
