@@ -433,12 +433,76 @@ function OpportunitiesContent() {
                       {opp.contacts?.name || '—'}
                     </td>
                     <td style={{ padding: '16px 24px' }}>
-                      <span className="badge" style={{ 
-                        background: STATUSES.find(s => s.id === opp.status)?.bg || 'transparent',
-                        color: STATUSES.find(s => s.id === opp.status)?.color || 'inherit'
-                      }}>
-                        {STATUSES.find(s => s.id === opp.status)?.label || opp.status}
-                      </span>
+                      {(() => {
+                        const statusObj = STATUSES.find(s => s.id === opp.status) || {
+                          label: opp.status,
+                          color: 'var(--text-primary)',
+                          bg: 'var(--surface-2)'
+                        }
+                        return (
+                          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                            <select
+                              value={opp.status}
+                              onChange={(e) => updateOppStatus(opp.id, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'none',
+                                background: statusObj.bg,
+                                color: statusObj.color,
+                                border: `1px solid ${statusObj.color}40`,
+                                borderRadius: 20,
+                                padding: '6px 26px 6px 14px',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                outline: 'none',
+                                transition: 'all 0.15s ease-in-out',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                              }}
+                            >
+                              {STATUSES.map(s => (
+                                <option
+                                  key={s.id}
+                                  value={s.id}
+                                  style={{
+                                    background: 'var(--surface, #ffffff)',
+                                    color: 'var(--text-primary, #000000)',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {s.label}
+                                </option>
+                              ))}
+                              {!STATUSES.some(s => s.id === opp.status) && (
+                                <option value={opp.status} style={{ background: 'var(--surface, #ffffff)', color: 'var(--text-primary, #000000)' }}>
+                                  {opp.status}
+                                </option>
+                              )}
+                            </select>
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{
+                                position: 'absolute',
+                                left: 10,
+                                pointerEvents: 'none',
+                                color: statusObj.color,
+                                opacity: 0.85
+                              }}
+                            >
+                              <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td style={{ padding: '16px 24px', fontWeight: 500, fontSize: 14 }}>
                       ₪{opp.calculated_value?.toLocaleString() || 0}
