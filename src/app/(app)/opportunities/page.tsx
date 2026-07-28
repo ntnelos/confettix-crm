@@ -453,7 +453,7 @@ function OpportunitiesContent() {
                                 color: statusObj.color,
                                 border: `1px solid ${statusObj.color}40`,
                                 borderRadius: 20,
-                                padding: '6px 26px 6px 14px',
+                                padding: '6px 10px 6px 24px',
                                 fontSize: 12,
                                 fontWeight: 600,
                                 cursor: 'pointer',
@@ -492,7 +492,7 @@ function OpportunitiesContent() {
                               strokeLinejoin="round"
                               style={{
                                 position: 'absolute',
-                                left: 10,
+                                left: 8,
                                 pointerEvents: 'none',
                                 color: statusObj.color,
                                 opacity: 0.85
