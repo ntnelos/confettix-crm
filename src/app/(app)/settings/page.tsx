@@ -35,6 +35,42 @@ export default function SettingsPage() {
       .then(({ data }: any) => { if (data) setLocations(data); });
   }, []);
 
+  const [isTestingMorning, setIsTestingMorning] = useState(false);
+  const [morningTestResult, setMorningTestResult] = useState<{
+    success: boolean;
+    message?: string;
+    business?: { id: string; name: string; taxId?: string; title?: string };
+    error?: string;
+  } | null>(null);
+
+  const handleTestMorning = async () => {
+    setIsTestingMorning(true);
+    setMorningTestResult(null);
+    try {
+      const res = await fetch('/api/morning/test');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMorningTestResult({
+          success: true,
+          message: data.message || 'החיבור ל-Morning תקין ומאומת',
+          business: data.business
+        });
+      } else {
+        setMorningTestResult({
+          success: false,
+          error: data.error || 'נכשלה בדיקת החיבור ל-Morning'
+        });
+      }
+    } catch (err: any) {
+      setMorningTestResult({
+        success: false,
+        error: `שגיאת תקשורת: ${err.message}`
+      });
+    } finally {
+      setIsTestingMorning(false);
+    }
+  };
+
   const handleSaveInvoice = async () => {
     setIsSaving(true);
     try {
@@ -115,10 +151,75 @@ export default function SettingsPage() {
 
           {/* Invoice Settings */}
           <div className="card" style={{ marginBottom: 24 }}>
-            <div className="card-header">
-              <h2 style={{ fontSize: 16, fontWeight: 600 }}>עריכת פרטי חשבונית (Morning)</h2>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>חיבור ופרטי חשבונית (Morning)</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0 0' }}>ניהול טקסטים ומצב החיבור למערכת חשבונית ירוקה (Morning)</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleTestMorning}
+                disabled={isTestingMorning}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '8px 16px' }}
+              >
+                {isTestingMorning ? (
+                  <>
+                    <span className="spinner" style={{ width: 14, height: 14, borderTopColor: 'var(--text)' }} />
+                    <span>בודק חיבור...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡</span>
+                    <span>בדוק חיבור ל-Morning</span>
+                  </>
+                )}
+              </button>
             </div>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {morningTestResult && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: morningTestResult.success ? '#ecfdf5' : '#fef2f2',
+                    border: `1px solid ${morningTestResult.success ? '#10b981' : '#ef4444'}`,
+                    color: morningTestResult.success ? '#065f46' : '#991b1b'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{morningTestResult.success ? '✅' : '❌'}</span>
+                    <div>
+                      <strong>{morningTestResult.success ? 'החיבור ל-Morning תקין ומאומת!' : 'שגיאה בהתחברות ל-Morning'}</strong>
+                      {morningTestResult.business && (
+                        <div style={{ fontSize: 12, marginTop: 2, opacity: 0.9 }}>
+                          עסק מקושר: <b>{morningTestResult.business.name}</b> {morningTestResult.business.taxId ? `(ח.פ / ע.מ: ${morningTestResult.business.taxId})` : ''}
+                        </div>
+                      )}
+                      {morningTestResult.error && (
+                        <div style={{ fontSize: 12, marginTop: 2 }}>{morningTestResult.error}</div>
+                      )}
+                    </div>
+                  </div>
+                  <a
+                    href="/settings/logs"
+                    style={{
+                      fontSize: 12,
+                      color: morningTestResult.success ? '#047857' : '#b91c1c',
+                      textDecoration: 'underline',
+                      whiteSpace: 'nowrap',
+                      marginRight: 12
+                    }}
+                  >
+                    צפייה בלוגים
+                  </a>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>טקסט ב-Footer החשבונית</label>
                 <textarea className="form-textarea" rows={4} placeholder="לדוגמה: תודה על קנייתכם..." value={settings.invoice_footer} onChange={e => setSettings(s => ({ ...s, invoice_footer: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)' }} />

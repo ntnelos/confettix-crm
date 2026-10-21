@@ -8,6 +8,24 @@ const getServiceClient = () =>
     { auth: { persistSession: false } }
   )
 
+async function logSystem(
+  supabase: any,
+  level: 'error' | 'warn' | 'info',
+  message: string,
+  details?: any
+) {
+  try {
+    await supabase.from('system_logs').insert({
+      level,
+      service: 'morning_webhook',
+      message,
+      details: details || null
+    })
+  } catch (logErr) {
+    console.error('Failed to log to system_logs:', logErr)
+  }
+}
+
 /**
  * POST /api/morning/webhook
  *
@@ -30,7 +48,7 @@ export async function POST(request: NextRequest) {
     const doc = body?.data ?? body
 
     const docType: number = Number(doc?.type)
-    const docId: string = doc?.id    // Morning document ID of the receipt
+    const docId: string = doc?.id // Morning document ID of the receipt
 
     // Only handle receipts (type 400)
     if (docType !== 400) {
@@ -38,17 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (!docId) {
+      await logSystem(supabase, 'warn', 'התקבל וובהוק מורנינג ללא מזהה מסמך', { body })
       return NextResponse.json({ error: 'Missing document id in webhook payload' }, { status: 400 })
     }
 
     // Find the linked tax invoice (type 305) among related documents
-    // Morning includes relatedDocuments array with the original invoice
     const relatedDocs: any[] = doc?.relatedDocuments ?? []
     const relatedInvoiceId: string | null =
       relatedDocs.find((d: any) => d.type === 305)?.id ?? null
 
     if (!relatedInvoiceId) {
       console.warn('Morning webhook: receipt has no related invoice (305). Payload:', JSON.stringify(doc))
+      await logSystem(supabase, 'warn', 'התקבלה קבלה ללא שיוך לחשבונית מס מקושרת', { docId, doc })
       return NextResponse.json({ error: 'No related invoice (type 305) found in receipt' }, { status: 422 })
     }
 
@@ -61,6 +80,10 @@ export async function POST(request: NextRequest) {
 
     if (invErr || !invoice) {
       console.error('Morning webhook: invoice not found for green_invoice_id', relatedInvoiceId, invErr)
+      await logSystem(supabase, 'error', `לא נמצאה חשבונית במסד הנתונים עבור green_invoice_id: ${relatedInvoiceId}`, {
+        relatedInvoiceId,
+        invErr
+      })
       return NextResponse.json({ error: 'Invoice not found in DB' }, { status: 404 })
     }
 
@@ -75,6 +98,7 @@ export async function POST(request: NextRequest) {
 
     if (orderErr || !order) {
       console.error('Morning webhook: order not found', orderId, orderErr)
+      await logSystem(supabase, 'error', `לא נמצאה הזמנה במסד עבור orderId: ${orderId}`, { orderId, orderErr })
       return NextResponse.json({ error: 'Order not found in DB' }, { status: 404 })
     }
 
@@ -97,18 +121,26 @@ export async function POST(request: NextRequest) {
       status: 'issued',
       issued_at: new Date().toISOString()
     }
-    
+
     const { error: receiptErr } = await supabase.from('invoices').insert(newReceipt)
     if (receiptErr) {
       console.error('Failed to create receipt record from webhook:', receiptErr)
+      await logSystem(supabase, 'error', 'נכשלה שמירת רשומת קבלה בבסיס הנתונים', { receiptErr, newReceipt })
     }
+
+    await logSystem(supabase, 'info', `קבלה מס' ${newReceipt.invoice_number} נקלטה - הזמנה ${orderId} סומנה כשולמה`, {
+      orderId,
+      opportunityId: order.opportunity_id,
+      receiptNumber: newReceipt.invoice_number,
+      receiptAmount: newReceipt.amount
+    })
 
     console.log(`Morning webhook: Order ${orderId} and Opportunity ${order.opportunity_id} marked as paid via receipt ${docId}`)
 
     return NextResponse.json({ success: true, orderId, opportunityId: order.opportunity_id })
-
   } catch (err: any) {
     console.error('Morning webhook error:', err)
+    await logSystem(supabase, 'error', `שגיאה בעיבוד וובהוק מורנינג: ${err.message}`, { stack: err.stack })
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

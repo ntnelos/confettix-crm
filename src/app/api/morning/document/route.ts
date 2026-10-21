@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getMorningErrorMessage } from '@/lib/morning/errors'
+import { getMorningConfig, getMorningToken, searchMorningClient } from '@/lib/morning/client'
 
 const getServiceClient = () =>
   createClient(
@@ -9,12 +10,35 @@ const getServiceClient = () =>
     { auth: { persistSession: false } }
   )
 
+async function logSystem(
+  supabase: any,
+  level: 'error' | 'warn' | 'info',
+  message: string,
+  details?: any
+) {
+  try {
+    await supabase.from('system_logs').insert({
+      level,
+      service: 'morning_api',
+      message,
+      details: details || null
+    })
+  } catch (logErr) {
+    console.error('Failed to log to system_logs:', logErr)
+  }
+}
+
 export async function POST(request: NextRequest) {
   const supabase = getServiceClient()
-  
+  let currentOrderId: string | null = null
+
   try {
-    const { orderId } = await request.json()
+    const body = await request.json()
+    const { orderId } = body
+    currentOrderId = orderId
+
     if (!orderId) {
+      await logSystem(supabase, 'warn', 'ניסיון להפקת חשבונית ללא orderId', { body })
       return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
     }
 
@@ -26,12 +50,16 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderErr || !order) {
-      return NextResponse.json({ error: `Order not found or query error: ${orderErr?.message}` }, { status: 404 })
+      const errMsg = `הזמנה לא נמצאה במערכת: ${orderErr?.message || orderId}`
+      await logSystem(supabase, 'error', errMsg, { orderId, orderErr })
+      return NextResponse.json({ error: errMsg }, { status: 404 })
     }
 
     const opportunity = order.opportunities
     if (!opportunity?.contact_id) {
-      return NextResponse.json({ error: 'No contact associated with this opportunity.' }, { status: 400 })
+      const errMsg = 'לא מקושר איש קשר להזדמנות זו'
+      await logSystem(supabase, 'error', errMsg, { orderId, opportunity })
+      return NextResponse.json({ error: errMsg }, { status: 400 })
     }
 
     // Fetch Contact
@@ -42,69 +70,74 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!contact) {
-      return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
+      const errMsg = 'פרטי איש הקשר לא נמצאו בבסיס הנתונים'
+      await logSystem(supabase, 'error', errMsg, { orderId, contactId: opportunity.contact_id })
+      return NextResponse.json({ error: errMsg }, { status: 404 })
     }
 
-    // 2. Authenticate with Morning API
-    const apiKey = process.env.MORNING_API_KEY || process.env.GREEN_INVOICE_API_KEY
-    const apiSecret = process.env.MORNING_API_SECRET
-    
-    if (!apiKey || !apiSecret) {
-      return NextResponse.json({ error: 'Morning API credentials not configured.' }, { status: 500 })
-    }
+    // 2. Authenticate with Morning API (OAuth2)
+    const { apiUrl } = getMorningConfig()
+    let token: string
 
-    const apiUrl = process.env.MORNING_API_URL || 'https://api.greeninvoice.co.il/api/v1'
-
-    let authRes;
     try {
-      authRes = await fetch(`${apiUrl}/account/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: apiKey, secret: apiSecret })
+      token = await getMorningToken()
+    } catch (authErr: any) {
+      const authMessage = authErr.message || 'שגיאת אימות מול שרתי Morning'
+      console.error('Morning Authentication Failed:', authErr)
+      await logSystem(supabase, 'error', `כשל באימות מול Morning: ${authMessage}`, {
+        orderId,
+        error: authMessage
       })
-    } catch (fetchErr: any) {
-      console.error('Morning Auth Network Error:', fetchErr)
-      return NextResponse.json({ error: `Network error connecting to Morning: ${fetchErr.message}` }, { status: 500 })
+      return NextResponse.json({ error: authMessage }, { status: 500 })
     }
-
-    if (!authRes.ok) {
-      const err = await authRes.text()
-      console.error('Morning Auth Error:', err)
-      return NextResponse.json({ error: `Morning Auth Error: ${err}` }, { status: 500 })
-    }
-
-    const authData = await authRes.json()
-    const token = authData.token
 
     // 3. Smart Client Logic (Morning ID Check)
-    let morningId: string | null = null;
-    let organizationData = null;
+    let morningId: string | null = null
+    let organizationData: any = null
 
     if (opportunity.organization_id) {
-      const { data: org } = await supabase.from('organizations').select('*').eq('id', opportunity.organization_id).single()
-      organizationData = org;
-      // Using existing morning_id column, assuming we'll fall back to contact logic if this fails, but wait, DB might not have morning_id on orgs.
-      // We will rely on contact's morning_id or organization's if available. To be safe, we'll store organization's morning_id in the 'notes' or a new column if exists.
-      morningId = org?.morning_id || contact.morning_id;
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', opportunity.organization_id)
+        .single()
+      organizationData = org
+      morningId = org?.morning_id || contact.morning_id
     } else {
-      morningId = contact.morning_id;
+      morningId = contact.morning_id
     }
 
+    // If client ID is missing in CRM, check if exists in Morning by email/name before creating
     if (!morningId) {
-      // Create new client in Morning
+      const clientName = (
+        organizationData?.invoice_company_name ||
+        organizationData?.name ||
+        contact.name ||
+        ''
+      ).trim()
+
+      const existingMorningClient = await searchMorningClient(token, {
+        email: contact.email,
+        name: clientName,
+        phone: contact.mobile || contact.phone
+      })
+
+      if (existingMorningClient && existingMorningClient.id) {
+        morningId = existingMorningClient.id
+        console.log(`Reusing existing Morning client ID: ${morningId} for ${clientName}`)
+      }
+    }
+
+    // If still no Morning ID, create client in Morning
+    if (!morningId) {
       const clientPayload: any = {
-        name: contact.name,
+        name: organizationData?.invoice_company_name || organizationData?.name || contact.name,
         emails: contact.email ? [contact.email] : [],
         active: true
       }
-      
+
       if (contact.mobile || contact.phone) {
         clientPayload.phone = contact.mobile || contact.phone
-      }
-
-      // Smart Naming Logic
-      if (organizationData) {
-         clientPayload.name = organizationData.invoice_company_name || organizationData.name || contact.name;
       }
 
       const clientRes = await fetch(`${apiUrl}/clients`, {
@@ -120,7 +153,7 @@ export async function POST(request: NextRequest) {
         const errText = await clientRes.text()
         let errorCode: any = null
         let translatedError = ''
-        
+
         try {
           const parsed = JSON.parse(errText)
           errorCode = parsed.errorCode || parsed.code
@@ -129,57 +162,86 @@ export async function POST(request: NextRequest) {
           }
         } catch (e) {}
 
-        console.error('Morning Client Create Error:', errText)
-        
-        // Log to DB
-        await supabase.from('system_logs').insert({
-          level: 'error',
-          service: 'morning_api',
-          message: translatedError || 'Failed to create client',
-          details: { error: errText, errorCode, payload: clientPayload, orderId }
-        })
+        // Fallback: If duplicate/identical client error (code 1010), attempt to find client
+        if (errorCode === 1010 || errText.includes('1010')) {
+          const fallbackFound = await searchMorningClient(token, {
+            email: contact.email,
+            name: clientPayload.name
+          })
+          if (fallbackFound?.id) {
+            morningId = fallbackFound.id
+          }
+        }
 
-        return NextResponse.json({ 
-          error: translatedError || 'Failed to create client in Morning API', 
-          details: errText 
-        }, { status: 500 })
+        if (!morningId) {
+          console.error('Morning Client Create Error:', errText)
+          await logSystem(supabase, 'error', translatedError || 'נכשלה יצירת כרטיס לקוח ב-Morning', {
+            error: errText,
+            errorCode,
+            payload: clientPayload,
+            orderId
+          })
+
+          return NextResponse.json(
+            {
+              error: translatedError || 'שגיאה ביצירת לקוח במערכת Morning',
+              details: errText
+            },
+            { status: 500 }
+          )
+        }
+      } else {
+        const clientData = await clientRes.json()
+        morningId = clientData.id
       }
 
-      const clientData = await clientRes.json()
-      morningId = clientData.id
+      // Update in our DB for future documents
+      if (morningId) {
+        if (organizationData && organizationData.id) {
+          const { error: orgErr } = await supabase
+            .from('organizations')
+            .update({ morning_id: morningId })
+            .eq('id', organizationData.id)
+          if (orgErr) console.warn('Non-critical: could not update org morning_id', orgErr.message)
 
-      // Update in our DB
-      if (organizationData && organizationData.id) {
-        // Try updating org morning_id if column exists, otherwise contact.
-        // We will just try safely.
-        const { error: orgErr } = await supabase.from('organizations').update({ morning_id: morningId }).eq('id', organizationData.id)
-        if (orgErr) console.warn("Non-critical: could not update org morning_id", orgErr.message)
-        
-        const { error: contactErr } = await supabase.from('contacts').update({ morning_id: morningId }).eq('id', contact.id)
-        if (contactErr) console.warn("Non-critical: could not update contact morning_id", contactErr.message)
-      } else {
-        const { error: contactErr } = await supabase.from('contacts').update({ morning_id: morningId }).eq('id', contact.id)
-        if (contactErr) console.warn("Non-critical: could not update contact morning_id", contactErr.message)
+          const { error: contactErr } = await supabase
+            .from('contacts')
+            .update({ morning_id: morningId })
+            .eq('id', contact.id)
+          if (contactErr) console.warn('Non-critical: could not update contact morning_id', contactErr.message)
+        } else {
+          const { error: contactErr } = await supabase
+            .from('contacts')
+            .update({ morning_id: morningId })
+            .eq('id', contact.id)
+          if (contactErr) console.warn('Non-critical: could not update contact morning_id', contactErr.message)
+        }
       }
     }
 
     // 4. Document Creation (Type 305 - Tax Invoice)
     // Gather line items
-    const quoteArgs = order.quotes as any;
-    // Wait, the query `quotes(id, subtotal, shipping_cost, quotes_items(*))` might not have `quotes_items`. Let's fetch quote items explicitly.
-    const { data: quoteItems } = await supabase.from('quote_items').select('*').eq('quote_id', order.quote_id)
-    
-    let income: any[] = [];
-    if (quoteItems) {
+    const { data: quoteItems } = await supabase
+      .from('quote_items')
+      .select('*')
+      .eq('quote_id', order.quote_id)
+
+    let income: any[] = []
+    if (quoteItems && quoteItems.length > 0) {
       income = quoteItems.map((item: any) => ({
         description: item.description ? `${item.product_name}\n${item.description}` : item.product_name,
-        quantity: item.quantity,
-        price: item.line_total / item.quantity // price after discount, BEFORE VAT
+        quantity: item.quantity || 1,
+        price: item.quantity > 0 ? item.line_total / item.quantity : item.line_total
       }))
     }
 
     // Add shipping if > 0
-    const { data: quote } = await supabase.from('quotes').select('shipping_cost, subtotal').eq('id', order.quote_id).single()
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('shipping_cost, subtotal')
+      .eq('id', order.quote_id)
+      .single()
+
     if (quote && quote.shipping_cost > 0) {
       income.push({
         description: 'משלוח',
@@ -187,42 +249,49 @@ export async function POST(request: NextRequest) {
         price: quote.shipping_cost
       })
     }
-    
-    // Also check if delivery method was 'check_delivery' with fee. We will just use the final order amount. Wait, if there's a discrepancy, let's just make it simple.
-    // Instead of precise calculation checking if total_amount matches, we can calculate total income. If it doesn't match total_amount, we might have check_delivery 25 ILS.
-    const calculatedIncomeSum = income.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-    const expectedSubtotal = quote ? (quote.subtotal + quote.shipping_cost) : 0;
-    
-    // If order.total_amount > (expectedSubtotal * 1.18 + 0.05) or something similar...
-    // Actually, check delivery fee is 25 ILS INCLUDING VAT, meaning ~21.36 ILS before VAT.
-    const expectedTotalAmountWithVat = expectedSubtotal * 1.18;
-    // If total_amount and expectedTotalAmountWithVat difference is about 25:
+
+    // Check delivery fee addition
+    const expectedSubtotal = quote ? quote.subtotal + (quote.shipping_cost || 0) : 0
+    const expectedTotalAmountWithVat = expectedSubtotal * 1.18
     if (Math.abs(order.total_amount - (expectedTotalAmountWithVat + 25)) < 1) {
       income.push({
-        description: 'תוספת תשלום בצ\'ק לשליח',
+        description: "תוספת תשלום בצ'ק לשליח",
         quantity: 1,
         price: 25 / 1.18
       })
     }
 
+    // Fallback: If income is somehow empty, add default row so Morning accepts document
+    if (income.length === 0) {
+      income.push({
+        description: order.order_number ? `הזמנה ${order.order_number}` : 'הזמנה',
+        quantity: 1,
+        price: (order.total_amount || 0) / 1.18
+      })
+    }
+
     // Fetch opportunity to get the subject and description
-    const { data: oppForDesc } = await supabase.from('opportunities').select('subject, description').eq('id', order.opportunity_id).single()
+    const { data: oppForDesc } = await supabase
+      .from('opportunities')
+      .select('subject, description')
+      .eq('id', order.opportunity_id)
+      .single()
 
     // Configuration Text (from settings data)
-    let invoiceFooter = '';
-    let invoiceEmailText = '';
+    let invoiceFooter = ''
+    let invoiceEmailText = ''
 
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const settingsPath = path.join(process.cwd(), 'data', 'settings.json');
+      const fs = require('fs')
+      const path = require('path')
+      const settingsPath = path.join(process.cwd(), 'data', 'settings.json')
       if (fs.existsSync(settingsPath)) {
-        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        invoiceFooter = settings.invoice_footer || '';
-        invoiceEmailText = settings.invoice_email || '';
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+        invoiceFooter = settings.invoice_footer || ''
+        invoiceEmailText = settings.invoice_email || ''
       }
     } catch (e) {
-      console.warn("Failed to load local settings for Invoice.");
+      console.warn('Failed to load local settings for Invoice.')
     }
 
     const docPayload: any = {
@@ -233,8 +302,8 @@ export async function POST(request: NextRequest) {
       currency: 'ILS',
       lang: 'he',
       income: income,
-      description: order.order_number || oppForDesc?.subject || '', // Order number maps to document description
-      remarks: oppForDesc?.description || '', // opp description maps to document remarks
+      description: order.order_number || oppForDesc?.subject || '',
+      remarks: oppForDesc?.description || '',
       footer: invoiceFooter,
       email: {
         send: true,
@@ -255,7 +324,7 @@ export async function POST(request: NextRequest) {
       const errText = await docRes.text()
       let errorCode: any = null
       let translatedError = ''
-      
+
       try {
         const parsed = JSON.parse(errText)
         errorCode = parsed.errorCode || parsed.code
@@ -265,16 +334,22 @@ export async function POST(request: NextRequest) {
       } catch (e) {}
 
       console.error('Morning Document Create Error:', errText)
-      
-      // Log to DB
-      await supabase.from('system_logs').insert({
-        level: 'error',
-        service: 'morning_api',
-        message: translatedError || 'Failed to create document',
-        details: { error: errText, errorCode, payload: docPayload, orderId }
+
+      // Log error to DB
+      await logSystem(supabase, 'error', translatedError || 'נכשלה הפקת חשבונית מס ב-Morning', {
+        error: errText,
+        errorCode,
+        payload: docPayload,
+        orderId
       })
 
-      return NextResponse.json({ error: translatedError || `Failed to create document: ${errText}` }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: translatedError || `נכשלה הפקת המסמך ב-Morning: ${errText}`,
+          details: errText
+        },
+        { status: 500 }
+      )
     }
 
     const docData = await docRes.json()
@@ -295,15 +370,24 @@ export async function POST(request: NextRequest) {
       status: 'issued',
       issued_at: new Date().toISOString()
     }
-    
-    // Log the full docData for debugging
-    console.log('Morning docData:', JSON.stringify(docData, null, 2))
 
-    const { data: insertedInvoice, error: invError } = await supabase.from('invoices').insert(newInvoice).select().single()
-    
+    const { data: insertedInvoice, error: invError } = await supabase
+      .from('invoices')
+      .insert(newInvoice)
+      .select()
+      .single()
+
     if (invError) {
       console.error('Insert Invoice Error:', invError)
-      return NextResponse.json({ error: 'Created in Morning, but failed to save in DB.', details: invError }, { status: 500 })
+      await logSystem(supabase, 'error', 'חשבונית הופקה ב-Morning אך נכשלה השמירה במסד הנתונים', {
+        invError,
+        docData,
+        orderId
+      })
+      return NextResponse.json(
+        { error: 'החשבונית נוצרה במורנינג אך אירעה שגיאה בשמירתה במערכת.', details: invError },
+        { status: 500 }
+      )
     }
 
     // 5. Update Opportunity Status to 'pending_payment'
@@ -316,10 +400,23 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to update opportunity status to pending_payment:', oppUpdateErr.message)
     }
 
-    return NextResponse.json({ success: true, invoice: insertedInvoice, docData })
+    // Log success
+    await logSystem(supabase, 'info', `חשבונית מס מס' ${newInvoice.invoice_number} הופקה בהצלחה`, {
+      invoiceId: insertedInvoice.id,
+      orderId,
+      invoiceNumber: newInvoice.invoice_number,
+      amount: newInvoice.amount
+    })
 
+    return NextResponse.json({ success: true, invoice: insertedInvoice, docData })
   } catch (err: any) {
-    console.error(err)
+    console.error('Unexpected Morning Document Route Error:', err)
+    await logSystem(
+      supabase,
+      'error',
+      `שגיאה פנימית בהפקת חשבונית: ${err.message}`,
+      { stack: err.stack, orderId: currentOrderId }
+    )
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
