@@ -36,43 +36,66 @@ export async function GET(
   const { data: quote } = await supabase.from('quotes').select('*').eq('id', quoteId).single()
   const { data: items } = await supabase.from('quote_items').select('*').eq('quote_id', quoteId).order('sort_order')
 
-  // 3. Fetch Organization + Addresses + Subject
+  // 3. Fetch Organization + Addresses + Subject + Contact + Payment Method + Expected Delivery
   let org: any = null
   let addresses: any[] = []
   let opp_subject = ''
+  let payment_method = null
+  let contact: any = null
+  let expected_delivery = null
+
   if (order.opportunity_id) {
-     const { data: oppData } = await supabase.from('opportunities').select('organization_id, subject').eq('id', order.opportunity_id).single()
-     if (oppData) {
-         opp_subject = oppData.subject || ''
-         if (oppData.organization_id) {
-             const { data: orgData } = await supabase.from('organizations').select('*').eq('id', oppData.organization_id).single()
-             org = orgData
-             
-             const { data: addrs } = await supabase.from('delivery_addresses').select('*').eq('organization_id', oppData.organization_id)
-             addresses = addrs || []
-         }
-     }
-  }
-  
-  // 4. Fetch the payment method & contact from opportunity
-  let payment_method = null;
-  let contact = null;
-  if (order.opportunity_id) {
-    const { data: oppForPay } = await supabase.from('opportunities').select('payment_method, contact_id').eq('id', order.opportunity_id).single()
-    if (oppForPay) {
-       payment_method = oppForPay.payment_method;
-       if (oppForPay.contact_id) {
-          const { data: contactData } = await supabase.from('contacts').select('*').eq('id', oppForPay.contact_id).single()
-          contact = contactData
-       }
+    const { data: oppData } = await supabase
+      .from('opportunities')
+      .select('organization_id, contact_id, subject, payment_method, expected_delivery')
+      .eq('id', order.opportunity_id)
+      .single()
+
+    if (oppData) {
+      opp_subject = oppData.subject || ''
+      payment_method = oppData.payment_method
+      expected_delivery = oppData.expected_delivery
+
+      if (oppData.contact_id) {
+        const { data: contactData } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('id', oppData.contact_id)
+          .single()
+        contact = contactData
+      }
+
+      const effectiveOrgId = oppData.organization_id || contact?.organization_id
+      if (effectiveOrgId) {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', effectiveOrgId)
+          .single()
+        org = orgData
+
+        const { data: addrs } = await supabase
+          .from('delivery_addresses')
+          .select('*')
+          .eq('organization_id', effectiveOrgId)
+        addresses = addrs || []
+      } else if (oppData.contact_id) {
+        const { data: addrs } = await supabase
+          .from('delivery_addresses')
+          .select('*')
+          .eq('contact_id', oppData.contact_id)
+        addresses = addrs || []
+      }
     }
   }
 
-  // 5. Fetch expected delivery from opportunity
-  let expected_delivery = null;
-  if (order.opportunity_id) {
-     const { data: oppDate } = await supabase.from('opportunities').select('expected_delivery').eq('id', order.opportunity_id).single()
-     if (oppDate) expected_delivery = oppDate.expected_delivery
+  if (order.delivery_address_id && !addresses.some((a: any) => a.id === order.delivery_address_id)) {
+    const { data: orderAddr } = await supabase
+      .from('delivery_addresses')
+      .select('*')
+      .eq('id', order.delivery_address_id)
+      .single()
+    if (orderAddr) addresses = [orderAddr, ...addresses]
   }
 
   return NextResponse.json({ order, quote, items: items || [], org, addresses, payment_method, contact, opp_subject, expected_delivery })
@@ -103,54 +126,86 @@ export async function POST(
     const { data: order } = await supabase.from('orders').select('id, opportunity_id').eq('quote_id', quoteId).single()
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
 
-    // 2. Handle new address logic
-    let final_address_id = delivery_address_id
-    if (new_address && new_address.street && new_address.city) {
-      // Find orig org id
-      const { data: opp } = await supabase.from('opportunities').select('organization_id').eq('id', order.opportunity_id).single()
-      if (opp?.organization_id) {
-        const { data: insertAddr } = await supabase.from('delivery_addresses').insert({
-           organization_id: opp.organization_id,
-           street: new_address.street,
-           city: new_address.city,
-           label: new_address.label || 'כתובת מהזמנה',
-           contact_name: new_address.contact_name || null,
-           contact_phone: new_address.contact_phone || null
-        }).select('id').single()
-        if (insertAddr) final_address_id = insertAddr.id
+    // 2. Fetch opportunity context (organization_id & contact_id)
+    let oppOrgId: string | null = null
+    let oppContactId: string | null = null
+    if (order.opportunity_id) {
+      const { data: opp } = await supabase
+        .from('opportunities')
+        .select('organization_id, contact_id')
+        .eq('id', order.opportunity_id)
+        .single()
+      oppOrgId = opp?.organization_id || null
+      oppContactId = opp?.contact_id || null
+
+      if (!oppOrgId && oppContactId) {
+        const { data: contactRow } = await supabase
+          .from('contacts')
+          .select('organization_id')
+          .eq('id', oppContactId)
+          .single()
+        if (contactRow?.organization_id) {
+          oppOrgId = contactRow.organization_id
+        }
       }
     }
 
-    // 3. Update the Organization (if exists)
-    let oppOrgId = null;
-    const { data: oppForOrg } = await supabase.from('opportunities').select('organization_id').eq('id', order.opportunity_id).single()
-    if (oppForOrg?.organization_id) {
-       oppOrgId = oppForOrg.organization_id;
-       await supabase.from('organizations').update({
-         invoice_company_name,
-         company_number
-       }).eq('id', oppOrgId)
+    // 3. Update or create the Organization (so invoice_company_name & company_number are persisted)
+    if (oppOrgId) {
+      await supabase.from('organizations').update({
+        invoice_company_name,
+        company_number
+      }).eq('id', oppOrgId)
+    } else if (invoice_company_name || company_number) {
+      const { data: createdOrg } = await supabase
+        .from('organizations')
+        .insert({
+          name: invoice_company_name || contact_name || 'לקוח מהזמנה',
+          invoice_company_name: invoice_company_name || null,
+          company_number: company_number || null
+        })
+        .select('id')
+        .single()
+      if (createdOrg?.id) {
+        oppOrgId = createdOrg.id
+        if (oppContactId) {
+          await supabase.from('contacts').update({ organization_id: oppOrgId }).eq('id', oppContactId)
+        }
+      }
     }
 
-    // 4. Update the Opportunity (payment method, status, value, and delivery date)
+    // 3.5 Handle new address logic (works both with and without an organization)
+    let final_address_id = delivery_address_id
+    if (new_address && new_address.street && new_address.city) {
+      const { data: insertAddr } = await supabase.from('delivery_addresses').insert({
+        organization_id: oppOrgId || null,
+        contact_id: oppContactId || null,
+        street: new_address.street,
+        city: new_address.city,
+        label: new_address.label || 'כתובת מהזמנה',
+        contact_name: new_address.contact_name || null,
+        contact_phone: new_address.contact_phone || null
+      }).select('id').single()
+      if (insertAddr) final_address_id = insertAddr.id
+    }
+
+    // 4. Update the Opportunity (payment method, status, value, delivery date, and organization_id if newly linked)
     if (order.opportunity_id) {
       await supabase.from('opportunities').update({
         payment_method,
         status: 'won',
         calculated_value: total_amount,
-        expected_delivery: body.expected_delivery // Extracting from body
+        expected_delivery: body.expected_delivery || null,
+        ...(oppOrgId ? { organization_id: oppOrgId } : {})
       }).eq('id', order.opportunity_id)
     }
 
     // 4.5 Update the Contact (if exists)
-    if (order.opportunity_id) {
-       const { data: oppForContact } = await supabase.from('opportunities').select('contact_id').eq('id', order.opportunity_id).single()
-       if (oppForContact?.contact_id) {
-          await supabase.from('contacts').update({
-            name: contact_name,
-            mobile: contact_phone // Using mobile for the phone number entered in the form
-          }).eq('id', oppForContact.contact_id)
-       }
+    if (oppContactId) {
+      await supabase.from('contacts').update({
+        name: contact_name,
+        mobile: contact_phone // Using mobile for the phone number entered in the form
+      }).eq('id', oppContactId)
     }
 
     // 5. Update the Order

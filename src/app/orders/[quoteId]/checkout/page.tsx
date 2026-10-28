@@ -381,7 +381,7 @@ ${window.location.href}
                 <div>
                   <img src="/confettix-logo.png" alt="קונפטיקס" style={{ marginBottom: 12, maxWidth: 150, alignSelf: 'center' }} />
                   <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, color: '#4caf50', marginBottom: 8 }}>סיכום וסגירת הזמנה</h1>
-                  <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>{data?.opp_subject || 'הזמנה'}&nbsp;<strong>{org.name}</strong></p>
+                  <p style={{ color: '#64748b', fontSize: 15, margin: 0 }}>{data?.opp_subject || 'הזמנה'}&nbsp;<strong>{org?.name || contactName || ''}</strong></p>
                 </div>
               </div>
 
