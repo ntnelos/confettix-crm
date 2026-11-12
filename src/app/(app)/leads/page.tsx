@@ -140,7 +140,7 @@ export default function LeadsPage() {
 
     if (messagesRes.data && messagesRes.data.length > 0) {
       setLeadMessages(messagesRes.data)
-    } else if (lead.status === 'converted') {
+    } else if (lead.status !== 'new' || lead.matched_contact_id) {
       const { data: inqMsgs } = await (supabase
         .from('contact_inquiries')
         .select('*')
@@ -165,12 +165,17 @@ export default function LeadsPage() {
   const openRejectModal = (lead: Lead) => {
     setSelectedLead(null)
     setRejectingLead(lead)
-    setSelectedReason('')
+    setSelectedReason(lead.rejection_reason_id || '')
   }
 
   const handleConfirmReject = async () => {
     if (!rejectingLead || !selectedReason) return
     setRejectingLoader(true)
+
+    // If this lead belongs to an existing customer, preserve the conversation in contact_inquiries even when not relevant
+    if (rejectingLead.matched_contact_id) {
+      await migrateLeadMessagesToInquiries(rejectingLead.id, rejectingLead.matched_contact_id, rejectingLead.source)
+    }
 
     await (supabase.from('leads') as any).update({
       status: 'trash',
@@ -181,6 +186,15 @@ export default function LeadsPage() {
     await fetchHandledLeads()
     setRejectingLead(null)
     setRejectingLoader(false)
+  }
+
+  const handleReopenLead = async (lead: Lead) => {
+    await (supabase.from('leads') as any).update({
+      status: 'new',
+      rejection_reason_id: null,
+    }).eq('id', lead.id)
+    setSelectedLead(null)
+    await Promise.all([fetchLeads(), fetchHandledLeads()])
   }
 
   /* ─── Convert: new contact ─── */
@@ -460,15 +474,35 @@ export default function LeadsPage() {
                         )
                       })()}
                     </td>
-                    <td>
-                      {lead.status === 'converted'
-                        ? <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>הומר</span>
-                        : <div>
-                          <span className="badge" style={{ background: '#fee2e2', color: '#991b1b', display: 'block', marginBottom: 2 }}>לא רלוונטי</span>
+                    <td onClick={e => e.stopPropagation()}>
+                      {lead.status === 'converted' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>הומר</span>
+                          <button
+                            onClick={() => openRejectModal(lead)}
+                            style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, border: '1px solid #fecaca', background: '#fff1f2', color: '#dc2626', cursor: 'pointer', fontWeight: 600 }}
+                            title="שנה סטטוס מ'הומר' ל'לא רלוונטי'"
+                          >
+                            שנה ללא רלוונטי
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <span className="badge" style={{ background: '#fee2e2', color: '#991b1b' }}>לא רלוונטי</span>
+                            <button
+                              onClick={() => handleReopenLead(lead)}
+                              style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                              title="החזר לתיבת הממתינים"
+                            >
+                              ↩️ החזר
+                            </button>
+                          </div>
                           {lead.rejection_reason?.label && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.rejection_reason.label}</span>
                           )}
-                        </div>}
+                        </div>
+                      )}
                     </td>
                     <td>
                       {lead.contacts
@@ -776,19 +810,26 @@ export default function LeadsPage() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ padding: '16px 24px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexShrink: 0 }}>
-              {selectedLead.is_existing_customer ? (
-                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleConfirmExistingLead(selectedLead)}>
-                  📋 הוסף להיסטוריה ועבור ללקוח
-                </button>
-              ) : (
-                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => openConvertModal(selectedLead)}>
-                  <UserPlusIcon /> המרה לאיש קשר
-                </button>
+            <div style={{ padding: '16px 24px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+              {selectedLead.status !== 'converted' && (
+                selectedLead.is_existing_customer ? (
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleConfirmExistingLead(selectedLead)}>
+                    📋 הוסף להיסטוריה ועבור ללקוח
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => openConvertModal(selectedLead)}>
+                    <UserPlusIcon /> המרה לאיש קשר
+                  </button>
+                )
               )}
               <button className="btn btn-ghost" style={{ color: '#dc2626', borderColor: '#fecaca', flex: 1 }} onClick={() => openRejectModal(selectedLead)}>
-                <TrashIcon /> לא רלוונטי
+                <TrashIcon /> {selectedLead.status === 'converted' ? 'שנה ל"לא רלוונטי"' : 'לא רלוונטי'}
               </button>
+              {selectedLead.status !== 'new' && (
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => handleReopenLead(selectedLead)}>
+                  ↩️ החזר לממתינים
+                </button>
+              )}
             </div>
           </div>
         </div>
