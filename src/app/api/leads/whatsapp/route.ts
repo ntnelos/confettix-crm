@@ -65,12 +65,33 @@ export async function POST(request: NextRequest) {
     .replace(/^972/, '0')
     .trim()
 
-  const senderName: string | null =
-    senderData.senderName ||
-    senderData.senderContactName ||
-    senderData.name ||
-    senderData.pushName ||
-    null
+  let senderName: string | null = null
+  if (webhookType.startsWith('outgoing')) {
+    // On outgoing messages, senderName/senderContactName is our own business name ("קונפטיקס נייד").
+    // Use chatName only if it is a real contact name (not digits and not our business name); otherwise use phone number.
+    const chatName = (senderData.chatName || '').trim()
+    const isPhoneLike = /^\+?[0-9\s\-]+$/.test(chatName)
+    if (chatName && chatName !== 'קונפטיקס נייד' && !isPhoneLike) {
+      senderName = chatName
+    } else {
+      senderName = cleanPhone || null
+    }
+  } else {
+    const candidateName = (
+      senderData.senderContactName ||
+      senderData.senderName ||
+      senderData.chatName ||
+      senderData.name ||
+      senderData.pushName ||
+      ''
+    ).trim()
+    const isPhoneLike = /^\+?[0-9\s\-]+$/.test(candidateName)
+    if (candidateName && candidateName !== 'קונפטיקס נייד' && !isPhoneLike) {
+      senderName = candidateName
+    } else {
+      senderName = cleanPhone || null
+    }
+  }
 
   // ── Extract message text ──
   let messageText: string =

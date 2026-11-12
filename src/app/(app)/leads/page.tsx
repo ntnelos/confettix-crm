@@ -138,7 +138,25 @@ export default function LeadsPage() {
         : Promise.resolve({ data: null }),
     ])
 
-    if (messagesRes.data) setLeadMessages(messagesRes.data)
+    if (messagesRes.data && messagesRes.data.length > 0) {
+      setLeadMessages(messagesRes.data)
+    } else if (lead.status === 'converted') {
+      const { data: inqMsgs } = await (supabase
+        .from('contact_inquiries')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .order('created_at') as any)
+      if (inqMsgs) {
+        setLeadMessages(inqMsgs.map((m: any) => ({
+          id: m.id,
+          lead_id: m.lead_id,
+          source: m.source,
+          content: m.message,
+          created_at: m.created_at,
+          raw_payload: m.raw_payload,
+        })))
+      }
+    }
     if (contactRes.data) setMatchedContact(contactRes.data)
     setLoadingModal(false)
   }
@@ -170,8 +188,9 @@ export default function LeadsPage() {
     setSelectedLead(null)
     setConvertingLead(lead)
     setConvertMode(lead.matched_contact_id ? 'existing' : 'new')
+    const safeName = lead.sender_name && lead.sender_name !== 'קונפטיקס נייד' ? lead.sender_name : (lead.sender_phone || '')
     setConvertData({
-      name: lead.sender_name || '',
+      name: safeName,
       phone: lead.sender_phone || '',
       email: lead.sender_email || '',
       company: lead.company_name || '',
@@ -336,6 +355,11 @@ export default function LeadsPage() {
   }
 
   const sourceLabel = (s: string) => s === 'whatsapp' ? 'WhatsApp' : s === 'note' ? 'תיעוד' : 'אתר אינטרנט'
+  const displaySenderName = (lead: Lead | null | undefined, fallback = 'ליד ללא שם') => {
+    const raw = lead?.sender_name?.trim()
+    if (raw && raw !== 'קונפטיקס נייד') return raw
+    return lead?.sender_phone || fallback
+  }
 
   /* ─── Render ─── */
   return (
@@ -402,14 +426,14 @@ export default function LeadsPage() {
               </thead>
               <tbody>
                 {handledLeads.map((lead: any) => (
-                  <tr key={lead.id} style={{ opacity: lead.status === 'trash' ? 0.65 : 1 }}>
+                  <tr key={lead.id} onClick={() => openLeadDetail(lead)} style={{ cursor: 'pointer', opacity: lead.status === 'trash' ? 0.65 : 1 }}>
                     <td>
                       {lead.source === 'whatsapp'
                         ? <span style={{ color: '#25D366' }}><WhatsAppIcon /></span>
                         : <span style={{ color: 'var(--text-muted)' }}><GlobeIcon /></span>}
                     </td>
                     <td>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{lead.sender_name || '—'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{displaySenderName(lead, '—')}</div>
                       {lead.sender_phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', direction: 'ltr' }}>{lead.sender_phone}</div>}
                     </td>
                     <td style={{ fontSize: 13 }}>{lead.company_name || '—'}</td>
@@ -503,7 +527,7 @@ export default function LeadsPage() {
                         : <span title="אתר" style={{ color: 'var(--text-muted)', fontSize: 18 }}><GlobeIcon /></span>}
                     </td>
                     <td>
-                      <div className="font-bold" style={{ fontSize: 13 }}>{lead.sender_name || '—'}</div>
+                      <div className="font-bold" style={{ fontSize: 13 }}>{displaySenderName(lead, '—')}</div>
                       {lead.sender_phone && <div className="td-muted" style={{ direction: 'ltr', textAlign: 'right' }}>{lead.sender_phone}</div>}
                     </td>
                     <td>
@@ -563,7 +587,7 @@ export default function LeadsPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{ fontSize: 22 }}>{selectedLead.source === 'whatsapp' ? '💬' : '🌐'}</span>
-                  <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{selectedLead.sender_name || 'ליד ללא שם'}</h3>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{displaySenderName(selectedLead)}</h3>
                   {selectedLead.is_existing_customer && <span className="badge badge-pink">לקוח קיים</span>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -702,7 +726,7 @@ export default function LeadsPage() {
                               boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                             }}>
                               <div style={{ fontSize: 10, fontWeight: 700, color: isOutgoing ? '#1d4ed8' : '#166534', marginBottom: 4 }}>
-                                {isOutgoing ? '← שלחנו' : `${selectedLead?.sender_name || 'ליד'} ←`}
+                                {isOutgoing ? '← שלחנו' : `${displaySenderName(selectedLead, 'ליד')} ←`}
                               </div>
                               <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                                 {msg.content?.split(/(https?:\/\/[^\s]+)/g).map((part: string, idx: number) =>

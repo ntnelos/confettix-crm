@@ -45,12 +45,30 @@ export async function processIncomingLead(
 
   console.log(`[processIncomingLead] source=${source} phone=${phone} email=${email}`)
 
+  const getPhoneVariants = (p: string): string[] => {
+    const digits = p.replace(/\D/g, '')
+    const variants = new Set<string>([p])
+    if (digits) {
+      variants.add(digits)
+      if (/^0\d{9}$/.test(digits)) {
+        variants.add(`${digits.slice(0, 3)}-${digits.slice(3)}`)
+      } else if (/^0\d{8}$/.test(digits)) {
+        variants.add(`${digits.slice(0, 2)}-${digits.slice(2)}`)
+      }
+    }
+    return Array.from(variants)
+  }
+
   // ─────────────────────────────────────────────
   // STEP 0: Check if sender is blacklisted ("לא לקוח")
   // ─────────────────────────────────────────────
   if (phone || email) {
     const orFilters: string[] = []
-    if (phone) orFilters.push(`sender_phone.eq.${phone}`)
+    if (phone) {
+      for (const v of getPhoneVariants(phone)) {
+        orFilters.push(`sender_phone.eq.${v}`)
+      }
+    }
     if (email) orFilters.push(`sender_email.eq.${email}`)
 
     const { data: blacklistedLead } = await (supabase
@@ -74,7 +92,9 @@ export async function processIncomingLead(
   if (phone || email) {
     const orFilters: string[] = []
     if (phone) {
-      orFilters.push(`sender_phone.eq.${phone}`)
+      for (const v of getPhoneVariants(phone)) {
+        orFilters.push(`sender_phone.eq.${v}`)
+      }
     }
     if (email) {
       orFilters.push(`sender_email.eq.${email}`)
@@ -82,7 +102,7 @@ export async function processIncomingLead(
 
     const { data: openLead } = await (supabase
       .from('leads')
-      .select('id')
+      .select('id, sender_name, sender_phone')
       .eq('status', 'new')
       .or(orFilters.join(',')) as any)
       .limit(1)
@@ -97,9 +117,16 @@ export async function processIncomingLead(
         raw_payload: rawPayload ?? null,
       })
 
-      // Touch the lead's updated_at so it surfaces in queries
+      // Touch the lead's updated_at, and update sender_name if it was previously only a phone number or "קונפטיקס נייד"
+      const currentName = (openLead.sender_name || '').trim()
+      const currentIsGeneric = !currentName || currentName === 'קונפטיקס נייד' || /^\+?[0-9\s\-]+$/.test(currentName)
+      const incomingIsRealName = !!name && name !== 'קונפטיקס נייד' && !/^\+?[0-9\s\-]+$/.test(name)
+
       await (supabase.from('leads') as any)
-        .update({ updated_at: new Date().toISOString() })
+        .update({
+          updated_at: new Date().toISOString(),
+          ...(currentIsGeneric && incomingIsRealName ? { sender_name: name } : {}),
+        })
         .eq('id', openLead.id)
 
       console.log(`[processIncomingLead] Appended message to existing lead ${openLead.id}`)
@@ -115,7 +142,9 @@ export async function processIncomingLead(
   if (phone || email) {
     const orFilters: string[] = []
     if (phone) {
-      orFilters.push(`mobile.eq.${phone}`, `phone.eq.${phone}`)
+      for (const v of getPhoneVariants(phone)) {
+        orFilters.push(`mobile.eq.${v}`, `phone.eq.${v}`)
+      }
     }
     if (email) {
       orFilters.push(`email.eq.${email}`)

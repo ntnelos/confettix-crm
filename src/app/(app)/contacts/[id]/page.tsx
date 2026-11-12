@@ -109,11 +109,11 @@ export default function ContactDetailsPage() {
         }
       }
 
-      // Fetch inquiries history
+      // Fetch inquiries history (chronological order for WhatsApp thread flow)
       const { data: inqs } = await (supabase.from('contact_inquiries') as any)
         .select('*')
         .eq('contact_id', c.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
       if (inqs) setInquiries(inqs)
       
       setLoading(false)
@@ -241,7 +241,7 @@ export default function ContactDetailsPage() {
       .select()
       .single()
     if (data) {
-      setInquiries(prev => [data, ...prev])
+      setInquiries(prev => [...prev, data])
       setNewInquiry({ source: 'website', message: '' })
       setShowInquiryForm(false)
     } else if (error) {
@@ -564,7 +564,7 @@ export default function ContactDetailsPage() {
                 </div>
               )}
 
-              <div style={{ padding: '12px 16px' }}>
+              <div style={{ padding: '12px 16px', maxHeight: 520, overflowY: 'auto' }}>
                 {inquiries.length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>אין פניות רשומות.</div>
                 ) : (
