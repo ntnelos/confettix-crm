@@ -36,7 +36,7 @@ export default function SettingsPage() {
   }, []);
 
   const [isTestingMorning, setIsTestingMorning] = useState(false);
-  const [metaAppId, setMetaAppId] = useState('');
+  const [metaAppId, setMetaAppId] = useState('2682437968850884');
   const [metaConfigId, setMetaConfigId] = useState('');
   const [metaSignupStatus, setMetaSignupStatus] = useState<string>('');
 
