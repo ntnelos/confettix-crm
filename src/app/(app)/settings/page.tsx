@@ -36,6 +36,65 @@ export default function SettingsPage() {
   }, []);
 
   const [isTestingMorning, setIsTestingMorning] = useState(false);
+  const [metaAppId, setMetaAppId] = useState('');
+  const [metaConfigId, setMetaConfigId] = useState('');
+  const [metaSignupStatus, setMetaSignupStatus] = useState<string>('');
+
+  const launchMetaCoexistenceSignup = () => {
+    if (!metaAppId.trim() || !metaConfigId.trim()) {
+      alert('נא להזין גם Meta App ID וגם Configuration ID (config_id) מתוך חשבון המפתחים של Meta.');
+      return;
+    }
+    setMetaSignupStatus('טוען חלון התחברות של Meta...');
+
+    const runFbLogin = () => {
+      const FB = (window as any).FB;
+      if (!FB) {
+        setMetaSignupStatus('שגיאה בטעינת הסקריפט של Meta (ודא שאין חוסם פרסומות שחוסם את connect.facebook.net).');
+        return;
+      }
+      FB.init({
+        appId: metaAppId.trim(),
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: 'v21.0',
+      });
+
+      FB.login(
+        (response: any) => {
+          if (response?.authResponse) {
+            setMetaSignupStatus(
+              `✅ החיבור מול Meta הושלם בהצלחה! קוד אימות התקבל (${String(response.authResponse.code || '').slice(0, 12)}...). כעת ודא שה-Webhook מוגדר ב-Meta.`
+            );
+          } else {
+            setMetaSignupStatus('תהליך ההתחברות בוטל או לא הושלם.');
+          }
+        },
+        {
+          config_id: metaConfigId.trim(),
+          response_type: 'code',
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+            featureType: 'whatsapp_business_app_onboarding',
+            sessionInfoVersion: '3',
+          },
+        }
+      );
+    };
+
+    if ((window as any).FB) {
+      runFbLogin();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://connect.facebook.net/en_US/sdk.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = runFbLogin;
+      script.onerror = () => setMetaSignupStatus('שגיאה בטעינת Facebook SDK.');
+      document.body.appendChild(script);
+    }
+  };
   const [morningTestResult, setMorningTestResult] = useState<{
     success: boolean;
     message?: string;
@@ -145,6 +204,79 @@ export default function SettingsPage() {
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>צפה בהיסטוריית שגיאות ופעולות מערכת, כולל תקלות מול ה-API של מורנינג.</p>
                 </div>
                 <a href="/settings/logs" className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 13, textDecoration: 'none' }}>צפייה בלוגים</a>
+              </div>
+            </div>
+          </div>
+
+          {/* Meta WhatsApp Coexistence Setup */}
+          <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card-header" style={{ padding: '20px 24px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>💬</span> חיבור WhatsApp רשמי (Meta Coexistence)
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                חיבור המספר הקיים באפליקציית WhatsApp Business בטלפון ישירות ל-Meta Cloud API (ללא ניתוק האפליקציה בטלפון).
+              </p>
+            </div>
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: 14, fontSize: 13 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>1. פרטי Webhook להעתקה לתוך Meta Developers:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Callback URL:</span>
+                    <code style={{ direction: 'ltr', background: 'white', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12 }}>
+                      https://confettix-crm.vercel.app/api/leads/whatsapp-meta
+                    </code>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Verify Token:</span>
+                    <code style={{ direction: 'ltr', background: 'white', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12 }}>
+                      confettix_meta_verify_2026
+                    </code>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#166534', marginBottom: 10 }}>
+                  2. הפעלת חלון החיבור (Embedded Signup - Coexistence):
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Meta App ID</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      dir="ltr"
+                      placeholder="למשל: 123456789012345"
+                      value={metaAppId}
+                      onChange={e => setMetaAppId(e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Configuration ID (config_id)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      dir="ltr"
+                      placeholder="למשל: 987654321098765"
+                      value={metaConfigId}
+                      onChange={e => setMetaConfigId(e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={launchMetaCoexistenceSignup}
+                  style={{ background: '#25D366', color: 'white', border: 'none', padding: '10px 18px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                >
+                  🔗 חבר את אפליקציית WhatsApp Business (Coexistence)
+                </button>
+                {metaSignupStatus && (
+                  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{metaSignupStatus}</div>
+                )}
               </div>
             </div>
           </div>
